@@ -1,0 +1,14 @@
+{
+  "name": "achadinhos-em-minutos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SaaS para automação de posts de afiliados",
+  "scripts": {
+    "dev": "pnpm --filter '*' dev",
+    "build": "pnpm --filter '*' build",
+    "test": "pnpm --filter '*' test"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import { telegramRoutes } from './routes/telegram';
 import { productRoutes } from './routes/products';
 import { marketplaceRoutes } from './routes/marketplaces';
+import { campaignRoutes } from './routes/campaigns';
 
 const server = Fastify({
   logger: true
@@ -10,7 +11,7 @@ const server = Fastify({
 // Tratamento de CORS básico
 server.addHook('onRequest', (request, reply, done) => {
   reply.header('Access-Control-Allow-Origin', '*'); // Para o MVP. Em prod, restringir para a url da Vercel.
-  reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   reply.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   if (request.method === 'OPTIONS') {
     reply.status(200).send();
@@ -27,6 +28,7 @@ server.get('/health', async (request, reply) => {
 server.register(telegramRoutes, { prefix: '/api/telegram' });
 server.register(productRoutes, { prefix: '/api/products' });
 server.register(marketplaceRoutes, { prefix: '/api/marketplaces' });
+server.register(campaignRoutes, { prefix: '/api/campaigns' });
 
 const start = async () => {
   try {

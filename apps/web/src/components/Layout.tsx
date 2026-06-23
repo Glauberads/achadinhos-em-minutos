@@ -9,7 +9,8 @@ import {
   Settings, 
   LogOut, 
   TrendingUp,
-  Search
+  Search,
+  Bot
 } from 'lucide-react'
 
 export function Layout() {
@@ -47,6 +48,7 @@ export function Layout() {
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Buscar Produtos', path: '/buscar-produtos', icon: Search },
     { name: 'Produtos', path: '/produtos', icon: Package },
+    { name: 'Automação', path: '/campanhas', icon: Bot },
     { name: 'Telegram', path: '/telegram', icon: Send },
     { name: 'WhatsApp', path: '#', icon: MessageCircle, disabled: true },
     { name: 'Configurações', path: '/config', icon: Settings },

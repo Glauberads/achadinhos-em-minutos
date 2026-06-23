@@ -5,6 +5,8 @@
   "description": "SaaS para automação de posts de afiliados",
   "scripts": {
     "dev": "pnpm --filter '*' dev",
+    "dev:api": "pnpm --filter api run dev:api",
+    "dev:workers": "pnpm --filter api run dev:workers",
     "build": "pnpm --filter '*' build",
     "test": "pnpm --filter '*' test"
   },

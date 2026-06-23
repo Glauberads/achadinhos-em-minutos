@@ -32,12 +32,13 @@ O "Achadinhos em Minutos" é um SaaS B2B2C para "garimpeiros" de ofertas e afili
 - Endpoint público de busca para o ML (com filtro de relevância) e infraestrutura Mock/Fallback de alta fidelidade para Shopee (para lidar com pendências de chaves oficiais).
 - Tela Front `/buscar-produtos` para preview e importação segura anti-duplicação (usando Unique Index Parcial no banco).
 
-### Fase 3 (Integrações Multi-Tenant) - CONCLUÍDO
-- **Painel de Integrações (`/config`):** Novo módulo visual no frontend com cards detalhados (Shopee, ML, Telegram) permitindo gestão do próprio usuário.
-- **Utilitário de Criptografia:** Lógica de criptografia de ponta-a-ponta no backend (`apps/api/src/lib/crypto.ts`) usando `AES-256-CBC` e `ENCRYPTION_KEY` para garantir segurança nos App Secrets dos clientes.
-- **Isolamento de Credenciais:** O frontend recebe status higienizados (`/api/marketplaces/status`), com máscaras para `affiliate_id` e ofuscamento total dos Segredos.
-- **Busca Dinâmica Customizada:** Providers (`shopee.provider.ts` e `mercadolivre.provider.ts`) agora fazem query silenciosa em `platform_connections`, descriptografam a chave do usuário em memória, e injetam na requisição oficial de forma nativa e agnóstica.
+### Fase 4 (Motor de Automação & Filas) - CONCLUÍDO
+- **Banco de Dados (Motor):** Criação das tabelas `campaigns`, `scheduled_posts` e `queue_locks` com Índice Único Parcial protegendo duplicação nativa na camada do banco.
+- **Infraestrutura de Mensageria:** Configuração de Redis nativo pareado com BullMQ, separando a carga da API (porta 3001) dos Workers de Processamento (`npm run dev:workers`).
+- **Worker 1 (Campaign Runner):** Cron/Jobs que escutam campanhas ativas, puxam de 10 em 10 produtos via Providers, inserem no BD de produtos e injetam posts agendados (`pending`). Valida a existência do `affiliate_link`.
+- **Worker 2 (Telegram Sender):** Consome a fila isolada `telegram-send`, travando via Redis (Rate Limiter customizado por `group_id`) e efetuando o disparo final, salvando logs ricos (`send_logs`).
+- **Frontend Premium:** Aba `/campanhas` criada para gestão de regras da máquina autônoma, validada com Empty States, skeletons e bloqueadores seguros de ação. Dashboard expandido para exibir fluxos do motor.
 
-## 5. Próximos Passos Futuros (Fase 4+)
-1. **Cron e Workers:** Trocar o envio manual (disparo no clique) por filas robustas (ex: BullMQ + Redis) e agendamento contínuo em background usando a rota `/api/products/auto-import` projetada.
-2. **Evolution API / WhatsApp:** Replicar a arquitetura da conexão de Telegram e os provedores de envio para instâncias de disparo do WhatsApp.
+## 5. Próximos Passos Futuros (Fase 5+)
+1. **Evolution API / WhatsApp:** Replicar a arquitetura da conexão de Telegram e os provedores de envio para instâncias de disparo do WhatsApp, com leitura via QR Code no Front.
+2. **Integração de Contas Pagas / Assinaturas:** Limitar quantidades de Campanhas e Groups dependendo da camada do usuário logado (ex: Stripe ou Pagar.me).

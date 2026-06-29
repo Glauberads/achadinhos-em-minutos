@@ -10,7 +10,8 @@ import {
   LogOut, 
   TrendingUp,
   Search,
-  Bot
+  Bot,
+  ShieldCheck
 } from 'lucide-react'
 
 export function Layout() {
@@ -51,6 +52,7 @@ export function Layout() {
     { name: 'Automação', path: '/campanhas', icon: Bot },
     { name: 'Telegram', path: '/telegram', icon: Send },
     { name: 'WhatsApp', path: '#', icon: MessageCircle, disabled: true },
+    { name: 'Auditoria', path: '/audit-logs', icon: ShieldCheck },
     { name: 'Configurações', path: '/config', icon: Settings },
   ]
 

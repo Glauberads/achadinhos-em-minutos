@@ -1,6 +1,8 @@
 import { IProductProvider, NormalizedProduct, SearchFilters } from './product-provider.types';
 import { supabaseAdmin } from '../../lib/supabase';
 import { decryptSecret } from '../../lib/crypto';
+import { cacheService } from '../../services/cache.service';
+import { CacheKeys } from '../../cache/cache-keys';
 
 export class MercadoLivreProvider implements IProductProvider {
   
@@ -29,15 +31,21 @@ export class MercadoLivreProvider implements IProductProvider {
 
     try {
       const query = filters.keyword ? encodeURIComponent(filters.keyword) : 'ofertas';
-      // A API pública do Mercado Livre funciona sem token para buscas simples
-      const url = `https://api.mercadolibre.com/sites/MLB/search?q=${query}&sort=relevance&limit=${filters.limit || 10}`;
-      
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Falha ao buscar no Mercado Livre');
-      
-      const data = await response.json();
-      
-      return data.results.map((item: any) => this.normalize(item, clientId));
+      const limit = filters.limit || 10;
+      const url = `https://api.mercadolibre.com/sites/MLB/search?q=${query}&sort=relevance&limit=${limit}`;
+
+      // Chave padronizada (Ex: marketplace:mercadolivre:search:1234:8c8d8f9)
+      const cacheKey = CacheKeys.marketplace.search('mercadolivre', userId || 'anonymous', filters);
+
+      // Usar remember (15 minutos de TTL)
+      return await cacheService.remember(cacheKey, 900, async () => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Falha ao buscar no Mercado Livre');
+        
+        const data: any = await response.json();
+        return data.results.map((item: any) => this.normalize(item, clientId));
+      });
+
     } catch (error) {
       console.error('Erro no ML Provider:', error);
       return [];

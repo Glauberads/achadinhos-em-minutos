@@ -1,106 +1,64 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { supabaseAdmin } from '../lib/supabase';
+import { requireAuth, getClientIp, getUserAgent } from '../middleware/auth.middleware';
+import { connectionRepository, groupRepository, productRepository } from '../repositories';
+import { telegramService, auditService } from '../services';
+import { validateBody, telegramConnectSchema, telegramTestSendSchema } from '../validators';
 
-// Middleware simulado como um hook do fastify para verificar JWT via header
-export const requireAuth = async (request: any, reply: any) => {
-  const authHeader = request.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    reply.status(401).send({ error: 'Token JWT não fornecido ou inválido' });
-    return;
-  }
-
-  const token = authHeader.split(' ')[1];
-  
-  // Usamos getUser para validar o token diretamente com o Supabase
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-
-  if (error || !user) {
-    reply.status(401).send({ error: 'Não autorizado', details: error?.message });
-    return;
-  }
-
-  // Pendura o usuário na request para uso nas rotas
-  request.user = user;
-};
-
+/**
+ * Rotas do Telegram — Refatoradas para usar:
+ * - Middleware centralizado (requireAuth)
+ * - Validators Zod
+ * - Repositories (ConnectionRepository, GroupRepository, ProductRepository)
+ * - Services (TelegramService, AuditService)
+ * 
+ * Nenhuma query direta ao Supabase — tudo via camada de abstração.
+ * Nenhuma lógica de negócio — tudo delegado aos Services.
+ */
 export const telegramRoutes: FastifyPluginAsync = async (fastify, opts) => {
-  
-  // Decorar request (opcional para TS, mas útil)
-  fastify.decorateRequest('user', null);
 
+  // ============================
   // 1. Conectar / Atualizar Token do Telegram
+  // ============================
   fastify.post('/connect', { preHandler: requireAuth }, async (request, reply) => {
-    const { bot_token, chat_id, group_name } = request.body as any;
     const user = request.user;
+    const body = validateBody(telegramConnectSchema, request.body);
 
-    if (!bot_token || !chat_id) {
-      return reply.status(400).send({ error: 'bot_token e chat_id são obrigatórios' });
-    }
-
-    // 1. Validar o token na Telegram API chamando getMe
     try {
-      const tgResponse = await fetch(`https://api.telegram.org/bot${bot_token}/getMe`);
-      const tgData = await tgResponse.json();
-
-      if (!tgData.ok) {
-        return reply.status(400).send({ error: 'Token do bot inválido', details: tgData.description });
+      // 1. Validar token na Telegram API
+      const validation = await telegramService.validateBotToken(body.bot_token);
+      if (!validation.valid) {
+        return reply.status(400).send({ error: 'Token do bot inválido', details: validation.error });
       }
 
-      const botUsername = tgData.result.username;
+      // 2. Salvar/atualizar na platform_connections
+      const { error: connError } = await connectionRepository.upsert(user.id, 'telegram', {
+        access_token: body.bot_token,
+        status: 'connected',
+        metadata: { bot_username: validation.username },
+      });
+      if (connError) throw connError;
 
-      // 2. Salvar na platform_connections (criptografia omitida para MVP rápido, mas essencial em prod)
-      const { data: existingConn } = await supabaseAdmin
-        .from('platform_connections')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('platform', 'telegram')
-        .single();
-
-      if (existingConn) {
-        const { error: updateError } = await supabaseAdmin
-          .from('platform_connections')
-          .update({
-            access_token: bot_token, // TODO: Criptografar antes de salvar
-            status: 'connected',
-            metadata: { bot_username: botUsername }
-          })
-          .eq('id', existingConn.id);
-        if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await supabaseAdmin
-          .from('platform_connections')
-          .insert({
-            user_id: user.id,
-            platform: 'telegram',
-            access_token: bot_token,
-            status: 'connected',
-            metadata: { bot_username: botUsername }
-          });
-        if (insertError) throw insertError;
-      }
-
-      // 3. Salvar o grupo principal
-      const { error: groupError } = await supabaseAdmin
-        .from('groups')
-        .insert({
-          user_id: user.id,
-          platform: 'telegram',
-          group_name: group_name || 'Meu Canal',
-          external_group_id: chat_id,
-          is_active: true
-        });
-
+      // 3. Salvar grupo
+      const { error: groupError } = await groupRepository.create({
+        user_id: user.id,
+        platform: 'telegram',
+        group_name: body.group_name,
+        external_group_id: body.chat_id,
+        is_active: true,
+      });
       if (groupError) throw groupError;
 
-      // 4. Salvar log de sistema
-      await supabaseAdmin.from('system_logs').insert({
-        user_id: user.id,
+      // 4. Auditoria
+      await auditService.log({
+        userId: user.id,
         action: 'telegram_connected',
         entity: 'platform_connections',
-        message: `Bot ${botUsername} conectado com sucesso.`
+        message: `Bot ${validation.username} conectado com sucesso.`,
+        ip: getClientIp(request),
+        userAgent: getUserAgent(request),
       });
 
-      return reply.send({ success: true, bot_username: botUsername });
+      return reply.send({ success: true, bot_username: validation.username });
 
     } catch (err: any) {
       fastify.log.error(err);
@@ -108,23 +66,14 @@ export const telegramRoutes: FastifyPluginAsync = async (fastify, opts) => {
     }
   });
 
-  // 2. Obter Status da Conexão (Seguro, sem expor token)
+  // ============================
+  // 2. Status da Conexão (sem expor token)
+  // ============================
   fastify.get('/status', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.user;
 
-    const { data: conn } = await supabaseAdmin
-      .from('platform_connections')
-      .select('status, metadata')
-      .eq('user_id', user.id)
-      .eq('platform', 'telegram')
-      .single();
-
-    const { count: groupsCount } = await supabaseAdmin
-      .from('groups')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('platform', 'telegram')
-      .eq('is_active', true);
+    const { data: conn } = await connectionRepository.findByPlatform(user.id, 'telegram');
+    const groupsCount = await groupRepository.countActiveByUser(user.id);
 
     if (!conn) {
       return reply.send({ connected: false, groups_count: 0 });
@@ -133,109 +82,68 @@ export const telegramRoutes: FastifyPluginAsync = async (fastify, opts) => {
     return reply.send({
       connected: conn.status === 'connected',
       bot_username: conn.metadata?.bot_username,
-      groups_count: groupsCount || 0
+      groups_count: groupsCount,
     });
   });
 
+  // ============================
   // 3. Envio de Teste
+  // ============================
   fastify.post('/test-send', { preHandler: requireAuth }, async (request, reply) => {
-    const { product_id, group_id } = request.body as any;
     const user = request.user;
+    const body = validateBody(telegramTestSendSchema, request.body);
 
     try {
-      // 1. Buscar conexão do Telegram
-      const { data: conn } = await supabaseAdmin
-        .from('platform_connections')
-        .select('access_token')
-        .eq('user_id', user.id)
-        .eq('platform', 'telegram')
-        .single();
-
-      if (!conn || !conn.access_token) {
+      // 1. Buscar token do bot
+      const botToken = await telegramService.getBotToken(user.id);
+      if (!botToken) {
         return reply.status(400).send({ error: 'Nenhuma conexão do Telegram encontrada para este usuário.' });
       }
 
-      // 2. Buscar Produto
-      const { data: product } = await supabaseAdmin
-        .from('products')
-        .select('*')
-        .eq('id', product_id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (!product) return reply.status(404).send({ error: 'Produto não encontrado ou não pertence a você.' });
-
-      // 3. Buscar Grupo
-      const { data: group } = await supabaseAdmin
-        .from('groups')
-        .select('external_group_id')
-        .eq('id', group_id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (!group) return reply.status(404).send({ error: 'Grupo não encontrado.' });
-
-      // 4. Montar Mensagem
-      const truncTitle = product.title.length > 80 ? product.title.substring(0, 80) + '...' : product.title;
-      
-      let caption = `🔥 *Achadinho em Minutos*\n\n`;
-      caption += `${truncTitle}\n\n`;
-      if (product.original_price > product.current_price) {
-        caption += `De: R$ ${product.original_price}\n`;
-      }
-      caption += `Por: *R$ ${product.current_price}*\n`;
-      if (product.discount) {
-        caption += `Desconto: ${product.discount}%\n\n`;
-      } else {
-        caption += `\n`;
-      }
-      
-      caption += `✅ Produto em alta\n`;
-      if (product.free_shipping) {
-        caption += `✅ Frete grátis\n`;
-      }
-      caption += `✅ Link seguro de afiliado\n\n`;
-      
-      const link = product.affiliate_link || product.source_url;
-      caption += `👉 *Comprar agora:*\n[Acessar Oferta](${link})`;
-
-      // 5. Enviar para Telegram API
-      let tgEndpoint = 'sendMessage';
-      let payload: any = {
-        chat_id: group.external_group_id,
-        parse_mode: 'Markdown',
-      };
-
-      if (product.image_url) {
-        tgEndpoint = 'sendPhoto';
-        payload.photo = product.image_url;
-        payload.caption = caption;
-      } else {
-        payload.text = caption;
+      // 2. Buscar produto
+      const product = await productRepository.findById(body.product_id, user.id);
+      if (!product) {
+        return reply.status(404).send({ error: 'Produto não encontrado ou não pertence a você.' });
       }
 
-      const tgResponse = await fetch(`https://api.telegram.org/bot${conn.access_token}/${tgEndpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      // 3. Buscar grupo
+      const { data: group } = await groupRepository.findById(body.group_id, user.id);
+      if (!group) {
+        return reply.status(404).send({ error: 'Grupo não encontrado.' });
+      }
+
+      // 4. Construir e enviar mensagem
+      const caption = telegramService.buildOfferMessage(product, false);
+      const result = await telegramService.sendMessage({
+        botToken,
+        chatId: group.external_group_id,
+        caption,
+        imageUrl: product.image_url,
       });
 
-      const tgResult = await tgResponse.json();
-
-      // 6. Registrar logs
-      const logStatus = tgResult.ok ? 'success' : 'failed';
-      const logError = tgResult.ok ? null : tgResult.description;
-
-      await supabaseAdmin.from('send_logs').insert({
-        user_id: user.id,
-        product_id: product.id,
-        group_id: group.id,
-        status: logStatus,
-        error_message: logError
+      // 5. Registrar log
+      const status = result.ok ? 'success' : 'failed';
+      await telegramService.logSendResult({
+        userId: user.id,
+        productId: product.id,
+        groupId: group.id,
+        status,
+        errorMessage: result.ok ? null : result.description,
       });
 
-      if (!tgResult.ok) {
-        return reply.status(500).send({ error: 'Erro no envio do Telegram', details: tgResult.description });
+      // 6. Auditoria
+      await auditService.log({
+        userId: user.id,
+        action: result.ok ? 'telegram_test_sent' : 'telegram_test_failed',
+        entity: 'send_logs',
+        entityId: product.id,
+        message: result.ok ? 'Teste enviado com sucesso' : `Falha: ${result.description}`,
+        ip: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+
+      if (!result.ok) {
+        return reply.status(500).send({ error: 'Erro no envio do Telegram', details: result.description });
       }
 
       return reply.send({ success: true, message: 'Teste enviado com sucesso!' });

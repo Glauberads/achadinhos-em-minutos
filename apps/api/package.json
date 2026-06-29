@@ -14,7 +14,7 @@
     "bullmq": "^5.7.8",
     "dotenv": "^16.4.5",
     "fastify": "^4.26.2",
-    "redis": "^4.6.14",
+    "ioredis": "^5.4.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {

@@ -1,64 +1,70 @@
 import { FastifyInstance } from 'fastify';
+import { requireAuth, getClientIp, getUserAgent } from '../middleware/auth.middleware';
+import { campaignRepository } from '../repositories';
+import { auditService } from '../services';
 import { supabaseAdmin } from '../lib/supabase';
+import {
+  validateBody,
+  validateParams,
+  campaignCreateSchema,
+  campaignUpdateSchema,
+  idParamSchema,
+} from '../validators';
 
-// Reusa a função do telegram.ts por praticidade
-const requireAuth = async (request: any, reply: any) => {
-  const authHeader = request.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    reply.status(401).send({ error: 'Token JWT não fornecido ou inválido' });
-    return;
-  }
-  const token = authHeader.split(' ')[1];
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !user) {
-    reply.status(401).send({ error: 'Não autorizado', details: error?.message });
-    return;
-  }
-  request.user = user;
-};
-
+/**
+ * Rotas de Campanhas — Refatoradas para usar:
+ * - Middleware centralizado
+ * - Validators Zod
+ * - CampaignRepository
+ * - AuditService
+ */
 export async function campaignRoutes(fastify: FastifyInstance) {
-  fastify.decorateRequest('user', null);
 
+  // ============================
   // 1. Criar Campanha
+  // ============================
   fastify.post('/', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.user;
-    const data = request.body as any;
+    const body = validateBody(campaignCreateSchema, request.body);
 
-    const { data: campaign, error } = await supabaseAdmin
-      .from('campaigns')
-      .insert({
-        user_id: user.id,
-        name: data.name,
-        platform: data.platform,
-        keyword: data.keyword,
-        category: data.category,
-        filters: data.filters || {},
-        telegram_group_id: data.telegram_group_id,
-        recurrence_cron: data.recurrence_cron,
-        next_run_at: new Date().toISOString(), // Inicia imediatamente ou no proximo ciclo
-        status: 'active'
-      })
-      .select()
-      .single();
+    const { data: campaign, error } = await campaignRepository.create({
+      user_id: user.id,
+      name: body.name,
+      platform: body.platform,
+      keyword: body.keyword,
+      category: body.category,
+      filters: body.filters,
+      telegram_group_id: body.telegram_group_id,
+      recurrence_cron: body.recurrence_cron,
+      next_run_at: new Date().toISOString(),
+      status: 'active',
+    });
 
     if (error) {
       request.log.error(error);
       return reply.code(500).send({ error: 'Falha ao criar campanha' });
     }
 
+    await auditService.log({
+      userId: user.id,
+      action: 'campaign_created',
+      entity: 'campaigns',
+      entityId: campaign.id,
+      message: `Campanha '${body.name}' criada.`,
+      ip: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
+
     return { success: true, campaign };
   });
 
+  // ============================
   // 2. Listar Campanhas
+  // ============================
   fastify.get('/', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.user;
 
-    const { data: campaigns, error } = await supabaseAdmin
-      .from('campaigns')
-      .select('*, telegram_group:groups(group_name)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    const { data: campaigns, error } = await campaignRepository.findByUser(user.id);
 
     if (error) {
       return reply.code(500).send({ error: 'Falha ao listar campanhas' });
@@ -67,76 +73,110 @@ export async function campaignRoutes(fastify: FastifyInstance) {
     return { campaigns };
   });
 
+  // ============================
   // 3. Atualizar Campanha
+  // ============================
   fastify.patch('/:id', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.user;
-    const { id } = request.params as any;
-    const data = request.body as any;
+    const { id } = validateParams(idParamSchema, request.params);
+    const body = validateBody(campaignUpdateSchema, request.body);
 
-    const { data: campaign, error } = await supabaseAdmin
-      .from('campaigns')
-      .update({
-        ...data,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .select()
-      .single();
+    const { data: campaign, error } = await campaignRepository.update(id, user.id, body);
 
     if (error) {
       return reply.code(500).send({ error: 'Falha ao atualizar campanha' });
     }
 
+    await auditService.log({
+      userId: user.id,
+      action: 'campaign_updated',
+      entity: 'campaigns',
+      entityId: id,
+      message: `Campanha atualizada.`,
+      metadata: { changes: body },
+      ip: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
+
     return { success: true, campaign };
   });
 
+  // ============================
   // 4. Pausar Campanha
+  // ============================
   fastify.post('/:id/pause', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.user;
-    const { id } = request.params as any;
+    const { id } = validateParams(idParamSchema, request.params);
 
-    await supabaseAdmin
-      .from('campaigns')
-      .update({ status: 'paused', updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .eq('user_id', user.id);
+    await campaignRepository.updateStatus(id, user.id, 'paused');
+
+    await auditService.log({
+      userId: user.id,
+      action: 'campaign_paused',
+      entity: 'campaigns',
+      entityId: id,
+      message: `Campanha pausada.`,
+      ip: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return { success: true, status: 'paused' };
   });
 
+  // ============================
   // 5. Retomar Campanha
+  // ============================
   fastify.post('/:id/resume', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.user;
-    const { id } = request.params as any;
+    const { id } = validateParams(idParamSchema, request.params);
 
-    await supabaseAdmin
-      .from('campaigns')
-      .update({ status: 'active', next_run_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .eq('user_id', user.id);
+    await campaignRepository.updateStatus(id, user.id, 'active', {
+      next_run_at: new Date().toISOString(),
+    });
+
+    await auditService.log({
+      userId: user.id,
+      action: 'campaign_resumed',
+      entity: 'campaigns',
+      entityId: id,
+      message: `Campanha retomada.`,
+      ip: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return { success: true, status: 'active' };
   });
 
+  // ============================
   // 6. Rodar Agora
+  // ============================
   fastify.post('/:id/run-now', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.user;
-    const { id } = request.params as any;
+    const { id } = validateParams(idParamSchema, request.params);
 
-    await supabaseAdmin
-      .from('campaigns')
-      .update({ next_run_at: new Date().toISOString() }) // Força o cron a pegar no proximo segundo
-      .eq('id', id)
-      .eq('user_id', user.id);
+    await campaignRepository.update(id, user.id, {
+      next_run_at: new Date().toISOString(),
+    });
+
+    await auditService.log({
+      userId: user.id,
+      action: 'campaign_run_now',
+      entity: 'campaigns',
+      entityId: id,
+      message: `Execução imediata solicitada.`,
+      ip: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return { success: true, message: 'Campanha colocada na fila de execução imediata.' };
   });
 
+  // ============================
   // 7. Listar Logs da Campanha (Scheduled Posts recentes)
+  // ============================
   fastify.get('/:id/logs', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.user;
-    const { id } = request.params as any;
+    const { id } = validateParams(idParamSchema, request.params);
 
     const { data: logs, error } = await supabaseAdmin
       .from('scheduled_posts')

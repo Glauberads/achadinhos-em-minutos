@@ -1,37 +1,39 @@
 import { IProductProvider, NormalizedProduct, SearchFilters } from './product-provider.types';
 import { supabaseAdmin } from '../../lib/supabase';
 import { decryptSecret } from '../../lib/crypto';
+import { cacheService } from '../../services/cache.service';
+import { CacheKeys } from '../../cache/cache-keys';
 
 export class ShopeeProvider implements IProductProvider {
   async search(filters: SearchFilters, userId?: string): Promise<NormalizedProduct[]> {
     if (!userId) return this.mockFallback(filters);
 
-    try {
-      const { data: conn } = await supabaseAdmin
-        .from('platform_connections')
-        .select('metadata')
-        .eq('user_id', userId)
-        .eq('platform', 'shopee')
-        .eq('status', 'connected')
-        .single();
+    const cacheKey = CacheKeys.marketplace.search('shopee', userId || 'anonymous', filters);
 
-      if (conn && conn.metadata?.app_id && conn.metadata?.app_secret) {
-        const appId = conn.metadata.app_id;
-        const appSecret = decryptSecret(conn.metadata.app_secret);
-        const affiliateId = conn.metadata.affiliate_id;
+    return await cacheService.remember(cacheKey, 900, async () => {
+      try {
+        const { data: conn } = await supabaseAdmin
+          .from('platform_connections')
+          .select('metadata')
+          .eq('user_id', userId!)
+          .eq('platform', 'shopee')
+          .eq('status', 'connected')
+          .single();
 
-        // Implementação futura da API Real usando appId e appSecret descriptografado
-        // await fetch('shopee_api...', { headers: { Auth: appSecret }})
-        
-        console.log(`[Shopee] Simulando busca real para o App ID: ${appId}`);
-        return this.mockFallback(filters, affiliateId);
+        if (conn && conn.metadata?.app_id && conn.metadata?.app_secret) {
+          const appId = conn.metadata.app_id;
+          // const appSecret = decryptSecret(conn.metadata.app_secret);
+          const affiliateId = conn.metadata.affiliate_id;
+          
+          console.log(`[Shopee] Simulando busca real para o App ID: ${appId}`);
+          return this.mockFallback(filters, affiliateId);
+        }
+      } catch (error) {
+        console.error('[Shopee Provider] Erro ao carregar credenciais:', error);
       }
-    } catch (error) {
-      console.error('[Shopee Provider] Erro ao carregar credenciais:', error);
-    }
 
-    // Fallback Mock se as credenciais não estiverem configuradas ou falharem
-    return this.mockFallback(filters);
+      return this.mockFallback(filters);
+    });
   }
 
   private async mockFallback(filters: SearchFilters, affiliateId?: string): Promise<NormalizedProduct[]> {

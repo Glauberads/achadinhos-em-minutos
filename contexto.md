@@ -32,6 +32,11 @@ O "Achadinhos em Minutos" é um SaaS B2B2C para "garimpeiros" de ofertas e afili
 - Endpoint público de busca para o ML (com filtro de relevância) e infraestrutura Mock/Fallback de alta fidelidade para Shopee (para lidar com pendências de chaves oficiais).
 - Tela Front `/buscar-produtos` para preview e importação segura anti-duplicação (usando Unique Index Parcial no banco).
 
+### Fase 3 (Integrações de Marketplaces e Segurança) - CONCLUÍDO
+- Aba de "Integrações" (Configurações) para cadastro seguro de credenciais da Shopee e Mercado Livre.
+- Criptografia forte (AES) implementada no backend (`lib/crypto.ts`) para proteger App Secrets e Client Secrets antes de salvar no banco.
+- Endpoints dedicados (`/api/marketplaces`) para gestão de credenciais por usuário logado.
+
 ### Fase 4 (Motor de Automação & Filas) - CONCLUÍDO
 - **Banco de Dados (Motor):** Criação das tabelas `campaigns`, `scheduled_posts` e `queue_locks` com Índice Único Parcial protegendo duplicação nativa na camada do banco.
 - **Infraestrutura de Mensageria:** Configuração de Redis nativo pareado com BullMQ, separando a carga da API (porta 3001) dos Workers de Processamento (`npm run dev:workers`).

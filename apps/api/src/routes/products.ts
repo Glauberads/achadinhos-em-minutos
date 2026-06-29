@@ -1,37 +1,37 @@
 import { FastifyInstance } from 'fastify';
+import { requireAuth, getClientIp, getUserAgent } from '../middleware/auth.middleware';
+import { productRepository } from '../repositories';
+import { auditService } from '../services';
 import { supabaseAdmin } from '../lib/supabase';
-import { ShopeeProvider, MercadoLivreProvider, SearchFilters, NormalizedProduct } from '../providers/products';
+import { ShopeeProvider, MercadoLivreProvider, SearchFilters } from '../providers/products';
+import { validateBody, productSearchSchema, productImportSchema } from '../validators';
 
+/**
+ * Rotas de Produtos — Refatoradas para usar:
+ * - Middleware centralizado
+ * - Validators Zod
+ * - ProductRepository
+ * - AuditService
+ */
 export async function productRoutes(fastify: FastifyInstance) {
-  
-  // Rota de Busca de Produtos (Preview)
-  fastify.post('/search', async (request, reply) => {
-    const authHeader = request.headers.authorization;
-    if (!authHeader) return reply.code(401).send({ error: 'Missing token' });
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (authError || !user) {
-      return reply.code(401).send({ error: 'Invalid token' });
-    }
+  // ============================
+  // 1. Busca de Produtos (Preview)
+  // ============================
+  fastify.post('/search', { preHandler: requireAuth }, async (request, reply) => {
+    const user = request.user;
+    const body = validateBody(productSearchSchema, request.body);
 
-    const { platform, keyword, category, limit } = request.body as any;
-
-    if (!platform || !['shopee', 'mercadolivre'].includes(platform)) {
-      return reply.code(400).send({ error: 'Platform must be shopee or mercadolivre' });
-    }
-
-    // 1. Criar Job de Busca com status pending
+    // 1. Criar Job de Busca
     const { data: job, error: jobError } = await supabaseAdmin
       .from('product_search_jobs')
       .insert({
         user_id: user.id,
-        platform: platform,
-        keyword: keyword,
-        category: category,
+        platform: body.platform,
+        keyword: body.keyword,
+        category: body.category,
         status: 'running',
-        filters: request.body
+        filters: body,
       })
       .select()
       .single();
@@ -43,9 +43,15 @@ export async function productRoutes(fastify: FastifyInstance) {
 
     try {
       // 2. Chamar o provider correspondente
-      const provider = platform === 'shopee' ? new ShopeeProvider() : new MercadoLivreProvider();
-      
-      const filters: SearchFilters = { keyword, category, limit: limit || 10 };
+      const provider = body.platform === 'shopee'
+        ? new ShopeeProvider()
+        : new MercadoLivreProvider();
+
+      const filters: SearchFilters = {
+        keyword: body.keyword,
+        category: body.category,
+        limit: body.limit,
+      };
       const products = await provider.search(filters, user.id);
 
       // 3. Atualizar Job com sucesso
@@ -54,7 +60,7 @@ export async function productRoutes(fastify: FastifyInstance) {
         .update({
           status: 'completed',
           total_found: products.length,
-          finished_at: new Date().toISOString()
+          finished_at: new Date().toISOString(),
         })
         .eq('id', job.id);
 
@@ -67,67 +73,43 @@ export async function productRoutes(fastify: FastifyInstance) {
         .update({
           status: 'failed',
           error_message: err.message || 'Unknown error',
-          finished_at: new Date().toISOString()
+          finished_at: new Date().toISOString(),
         })
         .eq('id', job.id);
-        
+
       return reply.code(500).send({ error: 'Search failed', details: err.message });
     }
   });
 
-  // Rota de Importação Segura
-  fastify.post('/import', async (request, reply) => {
-    const authHeader = request.headers.authorization;
-    if (!authHeader) return reply.code(401).send({ error: 'Missing token' });
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (authError || !user) {
-      return reply.code(401).send({ error: 'Invalid token' });
-    }
-
-    const { products, job_id } = request.body as { products: NormalizedProduct[], job_id?: string };
-
-    if (!products || !Array.isArray(products) || products.length === 0) {
-      return reply.code(400).send({ error: 'No products to import' });
-    }
+  // ============================
+  // 2. Importação Segura
+  // ============================
+  fastify.post('/import', { preHandler: requireAuth }, async (request, reply) => {
+    const user = request.user;
+    const body = validateBody(productImportSchema, request.body);
 
     let importedCount = 0;
     let ignoredCount = 0;
 
-    for (const prod of products) {
-      // Tratar affiliate_link vazio
+    for (const prod of body.products) {
+      // Marcar affiliate_status se link ausente
+      const metadata = { ...(prod.metadata || {}) };
       if (!prod.affiliate_link) {
-        prod.metadata.affiliate_status = 'missing';
+        metadata.affiliate_status = 'missing';
       }
 
-      // Validar user_id: IGNORA o do frontend e usa o do token autenticado
-      const productToInsert = {
-        ...prod,
-        user_id: user.id, // SEMPRE usa o user.id do token
-      };
-
-      // Tenta inserir via Supabase
-      // O ON CONFLICT não é facilmente suportado no SDK js padrão para indexes parciais complexos sem RPC
-      // Vamos fazer um check manual rápido para não complicar, ou tentar o insert e capturar o erro.
-      
-      const { data: existing } = await supabaseAdmin
-        .from('products')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('platform', prod.platform)
-        .eq('external_id', prod.external_id)
-        .single();
-
+      // Verificar duplicidade via Repository
+      const existing = await productRepository.findDuplicate(user.id, prod.platform, prod.external_id);
       if (existing) {
         ignoredCount++;
         continue;
       }
 
-      const { error: insertError } = await supabaseAdmin
-        .from('products')
-        .insert(productToInsert);
+      // Inserir via Repository (força user_id do token)
+      const { error: insertError } = await productRepository.insert(
+        { ...prod, metadata },
+        user.id,
+      );
 
       if (insertError) {
         request.log.error(insertError);
@@ -137,23 +119,25 @@ export async function productRoutes(fastify: FastifyInstance) {
       }
     }
 
-    // Atualiza o job se ele existir
-    if (job_id) {
+    // Atualiza o job se existir
+    if (body.job_id) {
       await supabaseAdmin
         .from('product_search_jobs')
         .update({ total_imported: importedCount })
-        .eq('id', job_id);
+        .eq('id', body.job_id);
     }
 
-    // Registrar log no sistema
-    await supabaseAdmin.from('system_logs').insert({
-      user_id: user.id,
+    // Auditoria centralizada
+    await auditService.log({
+      userId: user.id,
       action: 'products_imported',
+      entity: 'products',
       message: `${importedCount} produtos importados com sucesso. ${ignoredCount} ignorados (duplicados ou falha).`,
-      metadata: { imported: importedCount, ignored: ignoredCount }
+      metadata: { imported: importedCount, ignored: ignoredCount },
+      ip: getClientIp(request),
+      userAgent: getUserAgent(request),
     });
 
     return { success: true, imported: importedCount, ignored: ignoredCount };
   });
-
 }

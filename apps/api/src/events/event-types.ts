@@ -326,3 +326,108 @@ export class CacheHealthCheckEvent extends DomainEvent<{
     super('CacheHealthCheckEvent', payload, meta);
   }
 }
+
+// ============================
+// Creative Studio
+// ============================
+
+export class CreativeGenerationStartedEvent extends DomainEvent<{
+  creative_id: string;
+  product_url: string;
+}> {
+  constructor(payload: { creative_id: string; product_url: string }, meta?: any) {
+    super('CreativeGenerationStartedEvent', payload, meta);
+  }
+}
+
+export class CreativeGeneratedEvent extends DomainEvent<{
+  creative_id: string;
+}> {
+  constructor(payload: { creative_id: string }, meta?: any) {
+    super('CreativeGeneratedEvent', payload, meta);
+  }
+}
+
+export class CreativeFallbackGeneratedEvent extends DomainEvent<{
+  creative_id: string;
+  reason: string;
+}> {
+  constructor(payload: { creative_id: string; reason: string }, meta?: any) {
+    super('CreativeFallbackGeneratedEvent', payload, meta);
+  }
+}
+
+export class CreativeFailedEvent extends DomainEvent<{
+  creative_id: string;
+  error_message: string;
+}> {
+  constructor(payload: { creative_id: string; error_message: string }, meta?: any) {
+    super('CreativeFailedEvent', payload, meta);
+  }
+}
+
+export class CreativeSavedEvent extends DomainEvent<{
+  creative_id: string;
+}> {
+  constructor(payload: { creative_id: string }, meta?: any) {
+    super('CreativeSavedEvent', payload, meta);
+  }
+}
+
+export class CreativeUpdatedEvent extends DomainEvent<{
+  creative_id: string;
+}> {
+  constructor(payload: { creative_id: string }, meta?: any) {
+    super('CreativeUpdatedEvent', payload, meta);
+  }
+}
+
+export class CreativeDeletedEvent extends DomainEvent<{
+  creative_id: string;
+}> {
+  constructor(payload: { creative_id: string }, meta?: any) {
+    super('CreativeDeletedEvent', payload, meta);
+  }
+}
+
+export class CreativeRenderStartedEvent extends DomainEvent<{
+  creative_id: string;
+}> {
+  constructor(payload: { creative_id: string }, meta?: any) {
+    super('CreativeRenderStartedEvent', payload, meta);
+  }
+}
+
+export class CreativeRenderFinishedEvent extends DomainEvent<{
+  creative_id: string;
+}> {
+  constructor(payload: { creative_id: string }, meta?: any) {
+    super('CreativeRenderFinishedEvent', payload, meta);
+  }
+}
+
+export class CreativeRenderFailedEvent extends DomainEvent<{
+  creative_id: string;
+  error_message: string;
+}> {
+  constructor(payload: { creative_id: string; error_message: string }, meta?: any) {
+    super('CreativeRenderFailedEvent', payload, meta);
+  }
+}
+
+export class CreativeSelectedEvent extends DomainEvent<{
+  creative_id: string;
+}> {
+  constructor(payload: { creative_id: string }, meta?: any) {
+    super('CreativeSelectedEvent', payload, meta);
+  }
+}
+
+export class CreativeAnalyticsRegisteredEvent extends DomainEvent<{
+  creative_id: string;
+  conversions: number;
+}> {
+  constructor(payload: { creative_id: string; conversions: number }, meta?: any) {
+    super('CreativeAnalyticsRegisteredEvent', payload, meta);
+  }
+}

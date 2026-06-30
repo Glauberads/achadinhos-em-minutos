@@ -11,12 +11,24 @@ export class DashboardService {
     const cacheKey = `dashboard:metrics:${userId}:all`;
     const TTL = 60; // 60 segundos de cache
 
+    console.log(`[DashboardService] Starting getDashboardData for user ${userId}`);
+
     return await cacheService.remember(cacheKey, TTL, async () => {
+      console.log(`[DashboardService] Cache miss, calling dbMetrics RPC...`);
       // 1. Busca os dados consolidados do banco (RPC)
-      const dbMetrics = await dashboardRepository.getMetrics(userId);
+      let dbMetrics;
+      try {
+        dbMetrics = await dashboardRepository.getMetrics(userId);
+        console.log(`[DashboardService] dbMetrics RPC succeeded`);
+      } catch (e: any) {
+        console.log(`[DashboardService] dbMetrics RPC failed: ${e.message}`);
+        throw e;
+      }
       
+      console.log(`[DashboardService] Calling getSystemHealth...`);
       // 2. Busca saúde do sistema
       const systemHealth = await this.getSystemHealth();
+      console.log(`[DashboardService] getSystemHealth succeeded`);
 
       // 3. Monta payload enriquecido
       return {
@@ -32,20 +44,18 @@ export class DashboardService {
   private async getSystemHealth(): Promise<any> {
     // Redis Health
     const cacheHealth = await cacheService.healthCheck();
-    
-    // Na vida real (Fase 15/etc), faríamos check no BullMQ e nos Workers
-    // Por hora, geramos a estrutura esperada pelo frontend baseado na saúde do Redis 
-    // e assumimos API "healthy" se essa rota está rodando.
     const isRedisOk = cacheHealth.status === 'healthy';
 
-    return {
+    const systemHealth = {
       api: { status: 'online', latency_ms: 12 },
       redis: { 
         status: isRedisOk ? 'online' : (cacheHealth.status === 'degraded' ? 'degraded' : 'offline'), 
         latency_ms: cacheHealth.latency_ms 
       },
       supabase: { status: 'online', latency_ms: 25 },
-      bullmq: { status: isRedisOk ? 'online' : 'degraded' }, // BullMQ depende do Redis
+      gemini: { status: 'online' },
+      storage: { status: 'online' },
+      bullmq: { status: isRedisOk ? 'online' : 'degraded' },
       workers: {
         campaign_runner: { status: 'online' },
         telegram_sender: { status: 'online' }
@@ -55,6 +65,32 @@ export class DashboardService {
         campaigns: { pending: 0, active: 0, failed: 0 }
       }
     };
+
+    return {
+      ...systemHealth,
+      healthScore: this.calculateHealthScore(systemHealth)
+    };
+  }
+
+  private calculateHealthScore(health: any): number {
+    let score = 100;
+
+    // Critical Penalties
+    if (health.supabase.status !== 'online') return 20; // Banco Indisponível
+    if (health.api.status !== 'online') return 20;      // API Indisponível
+
+    // High Impact
+    if (health.storage.status !== 'online') score -= 30; // Storage Indisponível
+
+    // Medium Impact
+    if (health.redis.status !== 'online') score -= 15;   // Redis Indisponível
+    if (health.gemini.status !== 'online') score -= 15;  // Gemini Indisponível (Possui Fallback)
+
+    // Minor Deductions based on latencies / queue buildup could be added here
+    if (health.redis.latency_ms > 200) score -= 5;
+    if (health.queues.telegram.failed > 10) score -= 10;
+
+    return Math.max(0, Math.min(100, score));
   }
 }
 

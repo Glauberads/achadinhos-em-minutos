@@ -11,13 +11,29 @@ import {
   TrendingUp,
   Search,
   Bot,
-  ShieldCheck
+  ShieldCheck,
+  Wand2,
+  BarChart3
 } from 'lucide-react'
-
+import { api } from '../lib/api'
+import { OnboardingModal } from './ui/onboarding'
 export function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [flags, setFlags] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    const fetchFlags = async () => {
+      try {
+        const { data } = await api.get('/feature-flags')
+        setFlags(data.flags || {})
+      } catch (err) {
+        console.error('Failed to load flags', err)
+      }
+    }
+    fetchFlags()
+  }, [])
 
   useEffect(() => {
     const checkUser = async () => {
@@ -50,9 +66,11 @@ export function Layout() {
     { name: 'Buscar Produtos', path: '/buscar-produtos', icon: Search },
     { name: 'Produtos', path: '/produtos', icon: Package },
     { name: 'Automação', path: '/campanhas', icon: Bot },
+    { name: 'Creative Studio', path: '/creative-studio', icon: Wand2, hidden: flags['creative_studio_ai'] === false },
     { name: 'Telegram', path: '/telegram', icon: Send },
     { name: 'WhatsApp', path: '#', icon: MessageCircle, disabled: true },
     { name: 'Auditoria', path: '/audit-logs', icon: ShieldCheck },
+    { name: 'System Reports', path: '/system/reports', icon: BarChart3 },
     { name: 'Configurações', path: '/config', icon: Settings },
   ]
 
@@ -69,6 +87,7 @@ export function Layout() {
         
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {navItems.map((item) => {
+            if (item.hidden) return null;
             const Icon = item.icon
             const isActive = location.pathname === item.path
             
@@ -125,6 +144,9 @@ export function Layout() {
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <Outlet />
       </main>
+      
+      {/* Global Modals */}
+      <OnboardingModal />
     </div>
   )
 }

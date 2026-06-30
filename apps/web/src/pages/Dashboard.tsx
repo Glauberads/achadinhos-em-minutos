@@ -8,6 +8,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts'
+import { Card, Skeleton } from '../components/ui/core'
 
 interface DashboardData {
   kpis: any;
@@ -25,9 +26,15 @@ export function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [token, setToken] = useState<string | null>(null)
 
+  const [error, setError] = useState<string | null>(null)
+
   const fetchDashboardData = useCallback(async (background = false) => {
     if (!background) setLoading(true)
     else setIsRefreshing(true)
+    setError(null)
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 seconds timeout
 
     try {
       const { data: sessionData } = await supabase.auth.getSession()
@@ -39,17 +46,29 @@ export function Dashboard() {
       const response = await fetch('/api/dashboard/metrics', {
         headers: {
           'Authorization': `Bearer ${currentToken}`
-        }
+        },
+        signal: controller.signal
       })
+
+      clearTimeout(timeoutId)
 
       if (response.ok) {
         const json = await response.json()
         setData(json.data)
         setLastUpdated(new Date())
+      } else {
+        const errJson = await response.json().catch(() => ({}))
+        throw new Error(errJson.error || 'Erro ao carregar os dados do dashboard')
       }
-    } catch (error) {
-      console.error('Failed to fetch dashboard data:', error)
+    } catch (err: any) {
+      console.error('Failed to fetch dashboard data:', err)
+      if (err.name === 'AbortError') {
+        setError('A conexão com o servidor expirou. O banco de dados pode estar indisponível.')
+      } else {
+        setError(err.message)
+      }
     } finally {
+      clearTimeout(timeoutId)
       setLoading(false)
       setIsRefreshing(false)
     }
@@ -82,12 +101,32 @@ export function Dashboard() {
   }, [token, fetchDashboardData])
 
 
-  if (loading && !data) {
+  if (loading && !data && !error) {
     return (
       <div className="flex-1 p-8 bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-pulse">
           <Activity className="w-12 h-12 text-indigo-500 animate-spin" />
           <p className="text-gray-500 dark:text-gray-400">Carregando painel de inteligência...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !data) {
+    return (
+      <div className="flex-1 p-8 bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
+        <div className="max-w-md w-full">
+          <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-xl border border-red-200 dark:border-red-800 text-center space-y-4">
+            <XCircle className="w-12 h-12 text-red-500 mx-auto" />
+            <h3 className="text-lg font-bold text-red-700 dark:text-red-400">Falha ao carregar painel</h3>
+            <p className="text-sm text-red-600/80 dark:text-red-400/80">{error}</p>
+            <button 
+              onClick={() => fetchDashboardData()}
+              className="px-4 py-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors text-sm font-medium"
+            >
+              Tentar Novamente
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -321,20 +360,20 @@ export function Dashboard() {
 
 function KpiCard({ title, value, icon }: { title: string, value: string | number, icon: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+    <Card className="p-5 hover:shadow-md transition-shadow relative overflow-hidden group">
       <div className="flex justify-between items-start mb-2 relative z-10">
-        <h4 className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">{title}</h4>
-        <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/20 transition-colors">
+        <h4 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">{title}</h4>
+        <div className="p-2 rounded-lg bg-secondary group-hover:bg-primary/10 transition-colors">
           {icon}
         </div>
       </div>
-      <div className="text-2xl font-bold text-gray-900 dark:text-white relative z-10 truncate" title={String(value)}>
+      <div className="text-2xl font-bold relative z-10 truncate" title={String(value)}>
         {value}
       </div>
       <div className="absolute -bottom-4 -right-4 opacity-5 group-hover:opacity-10 transition-opacity transform scale-150 rotate-12">
         {icon}
       </div>
-    </div>
+    </Card>
   )
 }
 

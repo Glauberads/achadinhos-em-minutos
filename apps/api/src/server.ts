@@ -7,7 +7,11 @@ import { auditLogsRoutes } from './routes/audit-logs';
 import { cacheRoutes } from './routes/cache';
 import { featureFlagsRoutes } from './routes/feature-flags';
 import { dashboardRoutes } from './routes/dashboard';
+import { creativeRoutes } from './routes/creatives';
 import { registerEvents } from './events/event-registry';
+
+// Inicializar workers
+import './workers/creative-render.worker';
 
 const server = Fastify({
   logger: true
@@ -37,6 +41,35 @@ server.addHook('onRequest', (request, reply, done) => {
   if (request.method === 'OPTIONS') {
     reply.status(200).send();
     return;
+  }
+  done();
+});
+
+// ============================
+// Telemetry Hook
+// ============================
+import { telemetryService } from './services/telemetry.service';
+
+server.addHook('onRequest', (request, reply, done) => {
+  (request as any).startTime = performance.now();
+  done();
+});
+
+server.addHook('onResponse', (request, reply, done) => {
+  const startTime = (request as any).startTime;
+  if (startTime && !request.url.includes('/health')) {
+    const totalTime = Math.round(performance.now() - startTime);
+    const userId = (request as any).user?.id;
+    
+    // Non-blocking telemetry
+    telemetryService.log({
+      user_id: userId,
+      operation_type: 'API_REQUEST',
+      endpoint: request.url,
+      total_time_ms: totalTime,
+      status: reply.statusCode >= 400 ? 'ERROR' : 'SUCCESS',
+      metadata: { method: request.method, statusCode: reply.statusCode }
+    });
   }
   done();
 });
@@ -85,6 +118,7 @@ server.register(auditLogsRoutes, { prefix: '/api/audit-logs' });
 server.register(cacheRoutes, { prefix: '/api/cache' });
 server.register(featureFlagsRoutes, { prefix: '/api/feature-flags' });
 server.register(dashboardRoutes, { prefix: '/api/dashboard' });
+server.register(creativeRoutes, { prefix: '/api/creatives' });
 
 // ============================
 // Iniciar Servidor

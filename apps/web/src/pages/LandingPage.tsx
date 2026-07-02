@@ -49,9 +49,12 @@ export const LandingPage = () => {
               Pare de operar ferramentas e comece a operar lucros. Entre na lista de acesso e seja um dos primeiros a testar.
             </p>
             <Link to="/early-access">
-              <Button size="lg" className="h-14 px-10 text-lg rounded-full bg-white hover:bg-zinc-200 text-black font-bold shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_50px_rgba(255,255,255,0.25)] transition-all duration-300">
-                Garantir minha vaga
-                <ChevronRight className="w-5 h-5 ml-2" />
+              <Button size="lg" className="h-14 px-10 text-lg rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold group shadow-[0_0_40px_rgba(124,58,237,0.4)] hover:shadow-[0_0_60px_rgba(124,58,237,0.6)] transition-all duration-300 border border-indigo-400/20 relative overflow-hidden">
+                <span className="relative z-10 flex items-center">
+                  Garantir minha vaga
+                  <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </span>
+                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
               </Button>
             </Link>
           </div>

@@ -65,8 +65,12 @@ export const HeroSection = () => {
         
         <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
           <Link to="/early-access" className="w-full sm:w-auto">
-            <Button size="lg" className="w-full sm:w-auto bg-white hover:bg-zinc-200 text-black text-base h-12 px-8 rounded-full font-semibold shadow-[0_0_40px_rgba(255,255,255,0.15)] transition-all duration-300">
-              Entrar no Early Access
+            <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-base h-12 px-8 rounded-full font-semibold group shadow-[0_0_30px_rgba(124,58,237,0.4)] hover:shadow-[0_0_50px_rgba(124,58,237,0.6)] transition-all duration-300 border border-indigo-400/20 relative overflow-hidden">
+              <span className="relative z-10 flex items-center">
+                Entrar no Early Access
+                <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </span>
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
             </Button>
           </Link>
           <Button size="lg" variant="secondary" className="w-full sm:w-auto bg-white/5 border-white/10 hover:bg-white/10 text-white backdrop-blur-md h-12 px-8 rounded-full transition-all duration-300" onClick={() => document.getElementById('showcase')?.scrollIntoView({ behavior: 'smooth' })}>

@@ -32,10 +32,10 @@ export function Login() {
       if (profile?.role === 'super_admin') {
         navigate('/system/operation-center')
       } else {
-        navigate('/dashboard')
+        navigate('/checkout')
       }
     } else {
-      navigate('/dashboard')
+      navigate('/checkout')
     }
     setLoading(false)
   }

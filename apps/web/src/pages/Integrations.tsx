@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Send, Store, Key, ShieldCheck, ShieldAlert, CheckCircle2, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 import { useNavigate } from 'react-router-dom'
 
 interface IntegrationStatus {
@@ -38,12 +39,10 @@ export function Integrations() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      const response = await fetch('http://localhost:3001/api/marketplaces/status', {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      })
+      const response = await api.get('/api/marketplaces/status')
       
-      const data = await response.json()
-      if (response.ok && data.statuses) {
+      const data = response.data
+      if (data && data.statuses) {
         setStatuses(data.statuses)
       }
     } catch (err) {
@@ -61,32 +60,22 @@ export function Integrations() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       
-      const response = await fetch('http://localhost:3001/api/marketplaces/config', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({
-          platform: editingPlatform,
-          app_id: appId,
-          app_secret: appSecret,
-          affiliate_id: affiliateId
-        })
+      const response = await api.post('/api/marketplaces/config', {
+        platform: editingPlatform,
+        app_id: appId,
+        app_secret: appSecret,
+        affiliate_id: affiliateId
       })
 
-      if (response.ok) {
+      if (response.data) {
         setEditingPlatform(null)
         setAppId('')
         setAppSecret('')
         setAffiliateId('')
         fetchStatuses()
-      } else {
-        const data = await response.json()
-        alert('Erro ao salvar: ' + data.error)
       }
-    } catch (err) {
-      alert('Falha de comunicação.')
+    } catch (err: any) {
+      alert('Erro ao salvar: ' + (err.response?.data?.error || err.message))
     } finally {
       setSaving(false)
     }

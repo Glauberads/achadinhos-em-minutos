@@ -21,6 +21,7 @@ function getCreativePreviewImage(creative: any): string {
 export function CreativeStudio() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('gerador');
+  const API_URL = import.meta.env.VITE_API_URL || '';
   
   // Video Generator State
   const [url, setUrl] = useState('');
@@ -597,7 +598,7 @@ export function CreativeStudio() {
                           className="relative bg-white overflow-hidden"
                         >
                           <img 
-                            src={`http://localhost:3001/api/creatives/proxy-image?url=${encodeURIComponent(getCreativePreviewImage(generatedImageCreative))}`} 
+                            src={`${API_URL}/api/creatives/proxy-image?url=${encodeURIComponent(getCreativePreviewImage(generatedImageCreative))}`} 
                             alt="Produto"
                             className="absolute inset-0 w-full h-full object-cover"
                             crossOrigin="anonymous" 

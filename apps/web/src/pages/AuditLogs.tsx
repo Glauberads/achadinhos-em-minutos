@@ -29,6 +29,7 @@ interface Pagination {
 // Em um app real usaríamos o supabase.auth.getSession() + fetch para a nossa API protegida
 // Para este exemplo, como a API é protegida por JWT, precisamos buscar o token.
 import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 
 export function AuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([])
@@ -64,16 +65,9 @@ export function AuditLogs() {
       if (filters.status) query.append('status', filters.status)
       if (filters.entity) query.append('entity', filters.entity)
 
-      const response = await fetch(`http://localhost:3001/api/audit-logs?${query.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
-
-      if (!response.ok) throw new Error('Failed to fetch logs')
-
-      const result = await response.json()
+      const response = await api.get(`/api/audit-logs?${query.toString()}`);
       
+      const result = response.data;
       setLogs(result.data)
       setPagination(result.pagination)
       

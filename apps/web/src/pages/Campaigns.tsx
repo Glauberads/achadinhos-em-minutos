@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Play, Pause, RefreshCw, BarChart2, Bot, AlertTriangle, Clock, Settings, Store, CheckCircle2, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 import { useNavigate } from 'react-router-dom'
 
 interface Campaign {
@@ -48,11 +49,9 @@ export function Campaigns() {
       if (!session) return
 
       // Fetch Campaigns
-      const resCamp = await fetch('http://localhost:3001/api/campaigns', {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      })
-      const dataCamp = await resCamp.json()
-      if (resCamp.ok) setCampaigns(dataCamp.campaigns || [])
+      const resCamp = await api.get('/api/campaigns')
+      const dataCamp = resCamp.data
+      if (dataCamp) setCampaigns(dataCamp.campaigns || [])
 
       // Fetch Groups
       const { data: grps } = await supabase.from('groups').select('id, group_name').eq('is_active', true)
@@ -69,20 +68,13 @@ export function Campaigns() {
     setSaving(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('http://localhost:3001/api/campaigns', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify(formData)
-      })
-      if (res.ok) {
+      const res = await api.post('/api/campaigns', formData)
+      if (res.data) {
         setShowForm(false)
         fetchData()
-      } else {
-        alert('Erro ao salvar campanha.')
       }
+    } catch (err) {
+      alert('Erro ao salvar campanha.')
     } finally {
       setSaving(false)
     }
@@ -92,14 +84,13 @@ export function Campaigns() {
     setActionLoading(id)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch(`http://localhost:3001/api/campaigns/${id}/${action}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${session?.access_token}` }
-      })
-      if (res.ok) {
+      const res = await api.post(`/api/campaigns/${id}/${action}`)
+      if (res.data) {
         if (action === 'run-now') alert('Campanha enviada para a fila de execução!')
         fetchData()
       }
+    } catch (err) {
+      console.error('Error executing action:', err)
     } finally {
       setActionLoading(null)
     }

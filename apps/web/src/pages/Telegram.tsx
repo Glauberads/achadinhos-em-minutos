@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Send, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 
 export function TelegramConfig() {
   const [loading, setLoading] = useState(true)
@@ -15,14 +15,7 @@ export function TelegramConfig() {
 
   const fetchStatus = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/telegram/status`, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      })
-      
-      const data = await response.json()
+      const { data } = await api.get('/telegram/status')
       setStatus(data)
     } catch (err) {
       console.error('Erro ao buscar status', err)
@@ -42,27 +35,11 @@ export function TelegramConfig() {
     setSuccessMsg(null)
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error("Usuário não autenticado")
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/telegram/connect`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}` 
-        },
-        body: JSON.stringify({
-          bot_token: botToken,
-          chat_id: chatId,
-          group_name: groupName
-        })
+      const { data } = await api.post('/telegram/connect', {
+        bot_token: botToken,
+        chat_id: chatId,
+        group_name: groupName
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao conectar')
-      }
 
       setSuccessMsg(`Conectado com sucesso ao bot @${data.bot_username}!`)
       setBotToken('')

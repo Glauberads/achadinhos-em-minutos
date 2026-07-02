@@ -19,40 +19,30 @@ export class TelegramService {
    * @param isAutomatic - Se true, indica envio automático (muda header)
    */
   buildOfferMessage(product: any, isAutomatic = false): string {
-    const truncTitle = product.title.length > 80
-      ? product.title.substring(0, 80) + '...'
+    const truncTitle = product.title.length > 100
+      ? product.title.substring(0, 100) + '...'
       : product.title;
 
-    const header = isAutomatic ? '🔥 *Achadinho Automático*' : '🔥 *Achadinho em Minutos*';
-
-    let caption = `${header}\n\n`;
-    caption += `${truncTitle}\n\n`;
-
-    if (product.original_price > product.current_price) {
-      caption += `De: R$ ${product.original_price}\n`;
-    }
-    caption += `Por: *R$ ${product.current_price}*\n`;
-
-    if (product.discount) {
-      caption += `Desconto: ${product.discount}%\n\n`;
-    } else {
-      caption += `\n`;
+    let originalStr = '';
+    if (product.original_price && product.original_price > product.current_price) {
+      const priceFmt = Number(product.original_price).toFixed(2).replace('.', ',');
+      originalStr = `De ${priceFmt} ❌\n`;
     }
 
-    // Selos de confiança
-    if (product.sold_count > 100) {
-      caption += `✅ Mais de ${product.sold_count} vendidos\n`;
-    } else {
-      caption += `✅ Produto em alta\n`;
-    }
+    const currentFmt = Number(product.current_price).toFixed(2).replace('.', ',');
 
-    if (product.free_shipping) {
-      caption += `✅ Frete grátis garantido\n`;
+    let caption = `*🚨 OFERTA IMPERDÍVEL!* 💙😯😯😯\n\n`;
+    caption += `${truncTitle} 🤩\n\n`;
+    
+    if (originalStr) {
+      caption += originalStr;
     }
-    caption += `✅ Link seguro de parceiro\n\n`;
-
+    
+    caption += `*Por ${currentFmt}* 😯😯😯🔥🔥🔥\n\n`;
+    caption += `*Corre antes que acabe ‼️*\n\n`;
+    
     const link = product.affiliate_link || product.source_url;
-    caption += `👉 *COMPRE COM DESCONTO:*\n[Acessar Oferta Aqui](${link})`;
+    caption += `🔗Compre aqui:\n${link}`;
 
     return caption;
   }
@@ -69,19 +59,14 @@ export class TelegramService {
   }): Promise<{ ok: boolean; description?: string }> {
     const { botToken, chatId, caption, imageUrl } = params;
 
+    // Forçando sendMessage em vez de sendPhoto para que o Telegram gere o 
+    // Link Preview rico idêntico ao do screenshot do usuário.
     let endpoint = 'sendMessage';
     const payload: any = {
       chat_id: chatId,
       parse_mode: 'Markdown',
+      text: caption
     };
-
-    if (imageUrl) {
-      endpoint = 'sendPhoto';
-      payload.photo = imageUrl;
-      payload.caption = caption;
-    } else {
-      payload.text = caption;
-    }
 
     const response = await fetch(
       `https://api.telegram.org/bot${botToken}/${endpoint}`,

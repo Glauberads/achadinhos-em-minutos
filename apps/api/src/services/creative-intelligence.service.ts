@@ -1,4 +1,6 @@
 import { aiProvider } from '../providers/ai/ai-factory';
+import { redisConnection } from '../lib/redis';
+import crypto from 'crypto';
 
 export interface IntelligenceAnalysis {
   buyer_persona: any;
@@ -20,7 +22,33 @@ export interface IntelligenceAnalysis {
 }
 
 export class CreativeIntelligenceService {
+  private memoryCache = new Map<string, { data: IntelligenceAnalysis; expires: number }>();
+
   async analyzeProduct(product: any): Promise<IntelligenceAnalysis> {
+    const productHash = crypto.createHash('sha256').update(product.id || product.url).digest('hex');
+    const style = product.style || 'default';
+    const cacheKey = `creative_intelligence:${productHash}:${style}`;
+
+    // 1. Memory Cache
+    const memHit = this.memoryCache.get(cacheKey);
+    if (memHit && memHit.expires > Date.now()) {
+      return { ...memHit.data, cached: true } as IntelligenceAnalysis & { cached: true };
+    }
+
+    // 2. Redis Cache
+    try {
+      if (redisConnection.status === 'ready') {
+        const redisHit = await redisConnection.get(cacheKey);
+        if (redisHit) {
+          const parsed = JSON.parse(redisHit);
+          this.memoryCache.set(cacheKey, { data: parsed, expires: Date.now() + 1000 * 60 * 5 });
+          return { ...parsed, cached: true };
+        }
+      }
+    } catch (err) {
+      console.warn('Redis read failed for intelligence cache', err);
+    }
+
     const prompt = `
       Você é um especialista em marketing direto, copywriting e neuromarketing.
       Analise o seguinte produto e defina a persona compradora, suas dores, desejos, benefícios chave e objeções.
@@ -47,8 +75,8 @@ export class CreativeIntelligenceService {
       const responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
       const parsed = JSON.parse(responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, ''));
       
-      // Defaults to satisfy the interface for fields the AI might miss or we augment later
-      return {
+      
+      const analysisData = {
         ...parsed,
         recommended_style: parsed.recommended_style || 'Dinâmico',
         recommended_colors: parsed.recommended_colors || ['#FF0000', '#FFFFFF'],
@@ -57,6 +85,19 @@ export class CreativeIntelligenceService {
         recommended_hook: parsed.recommended_hook || 'Olha isso!',
         recommended_template: parsed.recommended_template || 'Oferta Relâmpago'
       };
+
+      // 3. Salvar Cache
+      try {
+        const ttl = 60 * 60 * 6; // 6h
+        if (redisConnection.status === 'ready') {
+          await redisConnection.setex(cacheKey, ttl, JSON.stringify(analysisData));
+        }
+        this.memoryCache.set(cacheKey, { data: analysisData, expires: Date.now() + 1000 * ttl });
+      } catch (err) {
+        console.warn('Failed to save intelligence to cache', err);
+      }
+
+      return analysisData;
     } catch (error) {
       console.error('Creative Intelligence fallback used due to error:', error);
       return this.getFallbackAnalysis(product);

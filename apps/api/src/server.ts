@@ -1,4 +1,6 @@
 import Fastify from 'fastify';
+import { z } from 'zod';
+import crypto from 'crypto';
 import { telegramRoutes } from './routes/telegram';
 import { productRoutes } from './routes/products';
 import { marketplaceRoutes } from './routes/marketplaces';
@@ -13,8 +15,16 @@ import { registerEvents } from './events/event-registry';
 // Inicializar workers
 import './workers/creative-render.worker';
 
+import multipart from '@fastify/multipart';
+
 const server = Fastify({
   logger: true
+});
+
+server.register(multipart, {
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
 });
 
 // Registrar eventos globalmente antes de qualquer requisição
@@ -78,34 +88,97 @@ server.addHook('onResponse', (request, reply, done) => {
 // Error Handler Global (Zod + erros genéricos)
 // ============================
 server.setErrorHandler((error, request, reply) => {
-  // Erros de validação Zod (via validateBody)
-  if ((error as any).validation && (error as any).statusCode === 400) {
+  const correlation_id = (request.headers['x-correlation-id'] as string) || crypto.randomUUID();
+  const userId = (request as any).user?.id || 'anonymous';
+  const timestamp = new Date().toISOString();
+
+  // Ocultar stack trace do cliente, mas registrar tudo no backend
+  const logPayload = {
+    correlation_id,
+    route: request.url,
+    method: request.method,
+    user_id: userId,
+    error_message: error.message,
+    stack: error.stack,
+    timestamp
+  };
+  
+  console.error('[Global Error Handler]', JSON.stringify(logPayload, null, 2));
+
+  // Erros de validação Zod (via validateBody ou direct parse)
+  if (error instanceof z.ZodError || ((error as any).validation && (error as any).statusCode === 400)) {
     return reply.status(400).send({
       error: 'Erro de validação',
-      details: (error as any).validation,
+      details: error instanceof z.ZodError ? error.errors : (error as any).validation,
+      correlation_id
     });
   }
 
-  // Erros HTTP conhecidos
+  // Erros do Supabase (ex: foreign key, uuid inválido)
+  if ((error as any).code && typeof (error as any).code === 'string' && (error as any).code.length === 5) {
+    return reply.status(400).send({
+      error: 'Erro de banco de dados ou integridade referencial.',
+      correlation_id
+    });
+  }
+
+  // Erros HTTP conhecidos (Fastify)
   if (error.statusCode && error.statusCode < 500) {
     return reply.status(error.statusCode).send({
       error: error.message,
+      correlation_id
     });
   }
 
-  // Erros internos — log sem expor stack ao cliente
-  request.log.error(error);
+  // Erro Genérico / 500
   return reply.status(500).send({
     error: 'Erro interno do servidor',
+    correlation_id
   });
 });
 
 // ============================
 // Health Check
 // ============================
-server.get('/health', async (request, reply) => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
-});
+const healthCheckHandler = async (request: any, reply: any) => {
+  const health = {
+    status: 'ok',
+    api: 'online',
+    redis: 'offline',
+    database: 'offline',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime())
+  };
+
+  try {
+    const { supabaseAdmin } = await import('./lib/supabase');
+    const { data, error } = await supabaseAdmin.from('users').select('id').limit(1);
+    if (!error) {
+      health.database = 'online';
+    }
+  } catch (e) {
+    // db offline
+  }
+
+  try {
+    const { cacheService } = await import('./services/cache.service');
+    // Assuming a ping method or just relying on generic catch if redis is truly down
+    // Since we don't have direct ping in cacheService necessarily, we try a dummy get
+    await cacheService.get('health_ping');
+    health.redis = 'online';
+  } catch (e) {
+    // redis offline
+  }
+
+  if (health.database === 'offline' || health.redis === 'offline') {
+    health.status = 'degraded';
+  }
+
+  return reply.status(200).send(health);
+};
+
+server.get('/health', healthCheckHandler);
+server.get('/api/health', healthCheckHandler);
 
 // ============================
 // Registrar Rotas

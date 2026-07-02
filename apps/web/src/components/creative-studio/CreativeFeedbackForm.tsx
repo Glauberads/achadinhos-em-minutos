@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Button, Checkbox, Textarea, Badge } from '../ui/core';
+import { Card, Button, Badge } from '../ui/core';
 import { Star, ThumbsUp, ThumbsDown, Send } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -108,7 +108,8 @@ export function CreativeFeedbackForm({ creativeId, onSubmitted }: FeedbackProps)
 
           <div className="space-y-3">
             <p className="text-sm font-medium">Algum comentário extra?</p>
-            <Textarea 
+            <textarea 
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               placeholder="Ex: Achei a transição inicial um pouco confusa..." 
               value={comments}
               onChange={(e: any) => setComments(e.target.value)}

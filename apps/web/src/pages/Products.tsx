@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Send, X, Image as ImageIcon, ExternalLink, RefreshCw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 
 type Product = {
   id: string
@@ -133,20 +134,10 @@ export function Products() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/telegram/test-send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({
-          product_id: currentProduct.id,
-          group_id: selectedGroup
-        })
+      const { data: result } = await api.post('/telegram/test-send', {
+        product_id: currentProduct.id,
+        group_id: selectedGroup
       })
-
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Erro no envio')
 
       setFeedbackMsg({ type: 'success', text: 'Mensagem enviada com sucesso para o Telegram!' })
       setTimeout(() => setIsTestOpen(false), 2000)

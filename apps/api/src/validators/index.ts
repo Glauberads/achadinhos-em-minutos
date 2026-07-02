@@ -125,6 +125,11 @@ export const idParamSchema = z.object({
 });
 export type IdParam = z.infer<typeof idParamSchema>;
 
+// ============================
+// Creative OS
+// ============================
+export * from './creative-os.validator';
+
 /**
  * Helper para validar body de request com um schema Zod.
  * Retorna os dados tipados ou lança erro 400 com detalhes.

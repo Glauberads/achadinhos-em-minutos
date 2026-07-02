@@ -150,7 +150,7 @@ export function Checkout() {
               <p className="text-sm text-gray-500 flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin text-indigo-500" /> Aguardando pagamento...
               </p>
-              <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/system/operation-center')}>
+              <Button variant="secondary" className="w-full mt-4" onClick={() => navigate('/system/operation-center')}>
                 Simular Pagamento Confirmado (MOCK)
               </Button>
             </div>

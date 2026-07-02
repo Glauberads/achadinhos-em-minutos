@@ -39,7 +39,7 @@ export function Gateways() {
               <p>• Webhooks ativos e idempotentes.</p>
             </div>
 
-            <Button variant="outline" className="w-full text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800">
+            <Button variant="secondary" className="w-full text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800">
               Configurar Gateway
             </Button>
           </Card>

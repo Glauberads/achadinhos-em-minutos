@@ -48,7 +48,7 @@ export const CreativeOSGrid = () => {
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-tr from-indigo-500/10 to-transparent transition-opacity duration-500 pointer-events-none" />
               
               <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-zinc-300 group-hover:text-indigo-400 group-hover:scale-110 transition-all mb-4">
-                {React.cloneElement(engine.icon as React.ReactElement, { className: 'w-5 h-5' })}
+                {React.cloneElement(engine.icon as React.ReactElement<any>, { className: 'w-5 h-5' })}
               </div>
               <h3 className="font-semibold text-zinc-200 mb-1">{engine.label}</h3>
               <p className="text-sm text-zinc-500">{engine.desc}</p>

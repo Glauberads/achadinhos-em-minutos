@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { Button, Badge } from '../ui/core';
 import { Wand2, ChevronRight, PlayCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const SparkleIcon = () => <Wand2 className="w-4 h-4 mr-2 inline" />;
+
+const HeroCanvasBackground = React.lazy(() => import('./HeroCanvasBackground'));
 
 export const HeroSection = () => {
   const mouseX = useMotionValue(0);
@@ -30,6 +32,11 @@ export const HeroSection = () => {
     <section className="relative w-full max-w-7xl mx-auto px-6 pt-32 pb-24 flex flex-col items-center text-center overflow-visible">
       {/* Premium Blurred Gradient Orbs - Hero Background (GPU Friendly) */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none select-none z-0 overflow-visible">
+        <Suspense fallback={null}>
+          <HeroCanvasBackground />
+        </Suspense>
+
+        {/* OLD ORBS (Manter comentado caso prefira reverter)
         <motion.div 
           style={{ x: springX, y: springY }}
           className="absolute w-[600px] h-[600px] rounded-full top-[-100px] left-[-150px] bg-[#7C3AED] opacity-15 blur-[120px] mix-blend-screen"
@@ -42,6 +49,7 @@ export const HeroSection = () => {
           style={{ x: springX, y: useSpring(useTransform(mouseY, v => v * -0.5), { stiffness: 30 }) }}
           className="absolute w-[700px] h-[700px] rounded-full top-[-200px] left-[30%] bg-[#3B82F6] opacity-10 blur-[180px] mix-blend-screen"
         />
+        */}
       </div>
 
       <motion.div 

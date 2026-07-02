@@ -83,9 +83,9 @@ export function StoryboardEditor({ initialScenes, onSave, onRender }: Storyboard
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex overflow-x-auto pb-4 gap-4 snap-x w-full custom-scrollbar">
         {scenes.map((scene, index) => (
-          <div key={scene.id} className="relative group bg-secondary/20 rounded-xl border border-border/50 overflow-hidden hover:shadow-md transition-shadow">
+          <div key={scene.id} className="relative group bg-secondary/20 rounded-xl border border-border/50 overflow-hidden hover:shadow-md transition-shadow shrink-0 w-[180px] snap-center flex flex-col">
             
             {/* Header / Actions */}
             <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-background/80 backdrop-blur rounded p-1">
@@ -101,19 +101,21 @@ export function StoryboardEditor({ initialScenes, onSave, onRender }: Storyboard
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4">
                 {editingId === scene.id ? (
                   <textarea 
-                    value={scene.text}
+                    value={scene.text || ''}
                     onChange={(e) => updateScene(scene.id, { text: e.target.value })}
-                    className="w-full bg-black/60 text-white border border-white/20 rounded p-2 text-sm outline-none resize-none"
-                    rows={3}
+                    className="w-full bg-black/80 text-white border border-white/40 rounded p-3 text-sm outline-none resize-none z-20 relative"
+                    rows={4}
                   />
                 ) : (
-                  <p className="text-white font-bold text-center drop-shadow-md text-lg leading-tight" onClick={() => setEditingId(scene.id)}>{scene.text}</p>
+                  <div className="bg-black/60 p-2 rounded-lg border border-white/20 z-20 relative cursor-pointer hover:bg-black/80 transition-colors mt-auto" onClick={() => setEditingId(scene.id)}>
+                    <p className="text-white font-bold text-center text-sm leading-tight">{scene.text || 'Sem texto'}</p>
+                  </div>
                 )}
               </div>
             </div>
 
             {/* Controls */}
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 mt-auto bg-card">
               <div className="flex justify-between items-center text-sm">
                 <span className="font-semibold">Cena {index + 1}</span>
                 <button onClick={() => setEditingId(editingId === scene.id ? null : scene.id)} className="text-primary hover:underline font-medium text-xs">

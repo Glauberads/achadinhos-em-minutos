@@ -431,3 +431,39 @@ export class CreativeAnalyticsRegisteredEvent extends DomainEvent<{
     super('CreativeAnalyticsRegisteredEvent', payload, meta);
   }
 }
+
+export class CreativeImageUploadStarted extends DomainEvent<{
+  creative_id: string;
+  filename: string;
+}> {
+  constructor(payload: { creative_id: string; filename: string }, meta?: any) {
+    super('CreativeImageUploadStarted', payload, meta);
+  }
+}
+
+export class CreativeImageUploaded extends DomainEvent<{
+  creative_id: string;
+  url: string;
+}> {
+  constructor(payload: { creative_id: string; url: string }, meta?: any) {
+    super('CreativeImageUploaded', payload, meta);
+  }
+}
+
+export class CreativeImageUploadFailed extends DomainEvent<{
+  creative_id: string;
+  error: string;
+}> {
+  constructor(payload: { creative_id: string; error: string }, meta?: any) {
+    super('CreativeImageUploadFailed', payload, meta);
+  }
+}
+
+export class CreativeFallbackAccepted extends DomainEvent<{
+  creative_id: string;
+  strategy: string;
+}> {
+  constructor(payload: { creative_id: string; strategy: string }, meta?: any) {
+    super('CreativeFallbackAccepted', payload, meta);
+  }
+}

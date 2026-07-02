@@ -25,64 +25,79 @@ export async function auditLogsRoutes(server: FastifyInstance) {
   });
 
   server.get('/', { preHandler: [requireAuth] }, async (request, reply) => {
-    // 1. Validação estrita via Zod
-    const query = getAuditLogsQuerySchema.parse(request.query);
+    try {
+      const resultParse = getAuditLogsQuerySchema.safeParse(request.query);
+      
+      if (!resultParse.success) {
+        return reply.status(400).send({
+          error: 'Parâmetros de filtro inválidos',
+          details: resultParse.error.errors
+        });
+      }
 
-    // 2. Isolamento Multi-tenant (RLS) via Repository
-    // A query no DB já aplicará RLS. Mas para garantir, podemos forçar user_id 
-    // ou organization_id se não for admin. Como o RLS está protegendo, 
-    // a nível de aplicação o Repository já isola dados por design (usando supabase client com auth) 
-    // mas aqui estamos usando o supabaseAdmin (Service Role) no backend, 
-    // ENTÃO a aplicação é quem deve forçar o user_id para não vazar logs de outros!
-    
-    const user_id = request.user.id;
+      const query = resultParse.data;
+      const user_id = request.user.id;
 
-    // 3. Execução (Repository)
-    const result = await auditRepository.findLogs({
-      ...query,
-      user_id // FORCE security: user pode ver apenas seus logs
-    });
+      const result = await auditRepository.findLogs({
+        ...query,
+        user_id // FORCE security: user pode ver apenas seus logs
+      });
 
-    // 4. Retorno
-    return reply.status(200).send({
-      success: true,
-      data: result.items,
-      pagination: {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        hasMore: result.hasMore,
-      },
-      filters_applied: Object.keys(query).filter(k => (query as any)[k] !== undefined)
-    });
+      return reply.status(200).send({
+        success: true,
+        data: result.items || [],
+        pagination: {
+          total: result.total || 0,
+          page: result.page || 1,
+          limit: result.limit || 50,
+          hasMore: result.hasMore || false,
+        },
+        filters_applied: Object.keys(query).filter(k => (query as any)[k] !== undefined)
+      });
+    } catch (err: any) {
+      console.error('[audit-logs/GET] Error:', err);
+      // Fail-safe array vazio em caso de falha de DB para não quebrar UI
+      return reply.status(200).send({
+        success: false,
+        data: [],
+        pagination: { total: 0, page: 1, limit: 50, hasMore: false },
+        filters_applied: []
+      });
+    }
   });
 
   server.get('/:id', { preHandler: [requireAuth] }, async (request, reply) => {
-    const { id } = request.params as { id: string };
-    
-    // NOTA: Como usamos supabaseAdmin no repositório, precisamos implementar a restrição de ID aqui
-    // Futuro ideal: criar um SupabaseClient com RLS do usuário logado (createServerClient).
-    // Por enquanto, faremos fetch no repository e checaremos se o user_id bate.
-    const result = await auditRepository.findByEventId(id);
+    try {
+      const { id } = request.params as { id: string };
+      const result = await auditRepository.findByEventId(id);
 
-    if (!result) {
-      return reply.status(404).send({ error: 'Audit log not found' });
+      if (!result) {
+        return reply.status(404).send({ error: 'Audit log not found' });
+      }
+
+      if (result.user_id !== request.user.id) {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
+      return reply.status(200).send({ success: true, data: result });
+    } catch (err: any) {
+      console.error('[audit-logs/GET_ID] Error:', err);
+      return reply.status(500).send({ error: 'Erro interno ao buscar log' });
     }
-
-    if (result.user_id !== request.user.id) {
-      return reply.status(403).send({ error: 'Forbidden' });
-    }
-
-    return reply.status(200).send({ success: true, data: result });
   });
   
   server.get('/correlation/:correlationId', { preHandler: [requireAuth] }, async (request, reply) => {
-    const { correlationId } = request.params as { correlationId: string };
-    const result = await auditRepository.findByCorrelationId(correlationId);
+    try {
+      const { correlationId } = request.params as { correlationId: string };
+      const result = await auditRepository.findByCorrelationId(correlationId);
 
-    // Filtrar apenas os que o usuário tem acesso (Segurança)
-    const filtered = result.filter(item => item.user_id === request.user.id);
+      // Filtrar apenas os que o usuário tem acesso (Segurança)
+      const filtered = result ? result.filter(item => item.user_id === request.user.id) : [];
 
-    return reply.status(200).send({ success: true, data: filtered });
+      return reply.status(200).send({ success: true, data: filtered });
+    } catch (err: any) {
+      console.error('[audit-logs/GET_CORRELATION] Error:', err);
+      return reply.status(500).send({ error: 'Erro interno ao buscar logs por correlação' });
+    }
   });
 }

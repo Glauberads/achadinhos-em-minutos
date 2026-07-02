@@ -133,7 +133,7 @@ export function OnboardingModal() {
           <Button variant="ghost" onClick={handleSkip} className="text-muted-foreground">
             Pular Etapa
           </Button>
-          <Button onClick={handleNext} icon={currentStepIndex === STEPS.length - 1 ? <Check className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />} iconPosition="right">
+          <Button onClick={handleNext} icon={currentStepIndex === STEPS.length - 1 ? <Check className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}>
             {currentStepIndex === STEPS.length - 1 ? 'Concluir Onboarding' : 'Próxima Etapa'}
           </Button>
         </div>

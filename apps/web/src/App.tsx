@@ -11,11 +11,11 @@ import { AuditLogs } from './pages/AuditLogs'
 import { CreativeStudio } from './pages/CreativeStudio'
 import { Reports } from './pages/Reports'
 import { AdminProductDashboard } from './pages/AdminProductDashboard'
+import { SystemLogs } from './pages/SystemLogs'
 
 import { ToastProvider } from './components/ui/toast'
 
-// Mock Components for Public Routes (To be implemented)
-const LandingPage = () => <div className="p-8 text-center"><h1 className="text-3xl font-bold">Achadinhos</h1><p>Landing Page</p></div>;
+import { LandingPage } from './pages/LandingPage';
 const Pricing = () => <div className="p-8 text-center"><h1 className="text-3xl font-bold">Planos</h1></div>;
 const Features = () => <div className="p-8 text-center"><h1 className="text-3xl font-bold">Recursos</h1></div>;
 const Enterprise = () => <div className="p-8 text-center"><h1 className="text-3xl font-bold">Enterprise</h1></div>;
@@ -50,6 +50,7 @@ function App() {
             {/* System / Admin Routes */}
             <Route path="/system/reports" element={<Reports />} />
             <Route path="/system/operation-center" element={<AdminProductDashboard />} />
+            <Route path="/system/logs" element={<SystemLogs />} />
           </Route>
 
         </Routes>

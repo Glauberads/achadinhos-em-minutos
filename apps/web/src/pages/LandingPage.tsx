@@ -26,7 +26,12 @@ export const LandingPage = () => {
             <Button variant="ghost" className="text-zinc-400 hover:text-white">Entrar</Button>
           </Link>
           <Link to="/early-access" className="hidden md:block">
-            <Button className="bg-white hover:bg-zinc-200 text-black border-0 font-semibold shadow-[0_0_15px_rgba(255,255,255,0.1)]">Early Access</Button>
+            <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold group shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300 border border-indigo-400/20 relative overflow-hidden rounded-full px-6">
+              <span className="relative z-10 flex items-center">
+                Early Access
+              </span>
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
+            </Button>
           </Link>
         </div>
       </nav>

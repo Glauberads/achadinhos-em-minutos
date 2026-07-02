@@ -52,12 +52,17 @@ export const HeroSection = () => {
           <SparkleIcon /> Creative OS Inteligente
         </Badge>
         
-        <h1 className="text-5xl md:text-7xl lg:text-[80px] font-bold tracking-tight max-w-5xl mb-6 leading-[1.1]">
-          Transforme produtos em{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400">
-            campanhas que vendem.
-          </span>
-        </h1>
+        <div className="relative w-full max-w-5xl flex justify-center mb-6">
+          {/* Efeito Neon Glow atrás do título */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-r from-indigo-600/40 via-purple-600/40 to-cyan-600/40 blur-[100px] pointer-events-none rounded-full z-0 opacity-70 mix-blend-screen animate-[pulse_4s_ease-in-out_infinite]" />
+          
+          <h1 className="relative z-10 text-5xl md:text-7xl lg:text-[80px] font-bold tracking-tight leading-[1.1]">
+            Transforme produtos em{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400">
+              campanhas que vendem.
+            </span>
+          </h1>
+        </div>
         
         <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mb-12 leading-relaxed font-light">
           Basta colar um link. Nossa IA faz todo o trabalho pesado: analisa o mercado, escreve a copy, desenha o layout e orquestra o vídeo final.

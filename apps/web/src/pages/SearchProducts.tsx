@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Search, ShoppingBag, ExternalLink, Download, Send, AlertTriangle, Info, CheckCircle2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 
 interface NormalizedProduct {
   platform: 'shopee' | 'mercadolivre';
@@ -63,24 +64,14 @@ export function SearchProducts() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       
-      const response = await fetch('http://localhost:3001/api/products/search', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ platform, keyword, limit: 12 })
-      })
+      const response = await api.post('/api/products/search', { platform, keyword, limit: 12 })
 
-      const data = await response.json()
-      if (response.ok) {
-        setResults(data.products)
-        setJobId(data.job_id)
-      } else {
-        alert('Erro ao buscar: ' + data.error)
+      if (response.data) {
+        setResults(response.data.products)
+        setJobId(response.data.job_id)
       }
-    } catch (err) {
-      alert('Falha na comunicação com o servidor')
+    } catch (err: any) {
+      alert('Erro ao buscar: ' + (err.response?.data?.error || err.message))
     } finally {
       setLoading(false)
     }
@@ -94,25 +85,15 @@ export function SearchProducts() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       
-      const response = await fetch('http://localhost:3001/api/products/import', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ products: productsToImport, job_id: jobId })
-      })
+      const response = await api.post('/api/products/import', { products: productsToImport, job_id: jobId })
 
-      const data = await response.json()
-      if (response.ok) {
-        setImportSuccess({ imported: data.imported, ignored: data.ignored })
+      if (response.data) {
+        setImportSuccess({ imported: response.data.imported, ignored: response.data.ignored })
         // Limpar seleção
         setSelectedIds(new Set())
-      } else {
-        alert('Erro ao importar: ' + data.error)
       }
-    } catch (err) {
-      alert('Falha ao importar produtos')
+    } catch (err: any) {
+      alert('Erro ao importar: ' + (err.response?.data?.error || err.message))
     } finally {
       setImporting(false)
     }

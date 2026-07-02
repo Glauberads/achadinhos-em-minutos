@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { motion, useSpring, useTransform, useInView } from 'framer-motion';
+import { motion, useSpring, useTransform, useInView, useMotionValueEvent } from 'framer-motion';
 
 export const AnimatedCounter = ({ value, suffix = '', duration = 2 }: { value: number, suffix?: string, duration?: number }) => {
   const ref = React.useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
+  const [currentDisplay, setCurrentDisplay] = useState('0');
   
   const spring = useSpring(0, {
     duration: duration * 1000,
@@ -14,6 +15,10 @@ export const AnimatedCounter = ({ value, suffix = '', duration = 2 }: { value: n
 
   const display = useTransform(spring, (current) => Math.floor(current).toLocaleString());
 
+  useMotionValueEvent(display, "change", (latest) => {
+    setCurrentDisplay(latest);
+  });
+
   useEffect(() => {
     if (isInView) {
       spring.set(value);
@@ -22,7 +27,7 @@ export const AnimatedCounter = ({ value, suffix = '', duration = 2 }: { value: n
 
   return (
     <motion.span ref={ref}>
-      {display}
+      {currentDisplay}
       {suffix}
     </motion.span>
   );

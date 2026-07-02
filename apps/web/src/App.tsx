@@ -12,6 +12,7 @@ import { CreativeStudio } from './pages/CreativeStudio'
 import { Reports } from './pages/Reports'
 import { AdminProductDashboard } from './pages/AdminProductDashboard'
 import { SystemLogs } from './pages/SystemLogs'
+import { Checkout } from './pages/Checkout'
 
 import { ToastProvider } from './components/ui/toast'
 
@@ -35,6 +36,7 @@ function App() {
           <Route path="/early-access" element={<EarlyAccess />} />
           <Route path="/status" element={<PublicStatus />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/checkout" element={<Checkout />} />
           
           {/* Rotas Autenticadas com Sidebar */}
           <Route element={<Layout />}>

@@ -9,7 +9,8 @@ O Creative Operating System representa a evolução (V3) do pipeline de geraçã
 ## 2. A Divisão de Responsabilidades
 
 ### Motores Analíticos (Intelligence & Strategy)
-Estes motores analisam o contexto antes da geração criativa.
+Estes motores analisam o contexto antes da geração criativa. 
+**Status atual (Bloco 2)**: `Implemented with Mock Intelligence` (Integração real com IA: `Planned for next block`).
 - **Visual Intelligence**: Avalia a qualidade, conteúdo e paleta de imagens base.
 - **Market Intelligence**: Analisa nichos, tendências de mercado e dores do público-alvo.
 - **Creative Intelligence**: Analisa referências de concorrentes e criativos que já funcionaram.

@@ -16,7 +16,7 @@ export default function HeroCanvasBackground() {
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const isMobile = window.innerWidth < 768;
-    const particleCount = isMobile ? 300 : 600;
+    const particleCount = isMobile ? 600 : 1200;
 
     try {
       // 1. Configurar Cena e Câmera
@@ -55,8 +55,8 @@ export default function HeroCanvasBackground() {
       // 4. Animação
       const animate = () => {
         if (!prefersReducedMotion) {
-          points.rotation.y += 0.0005;
-          points.rotation.x += 0.0002;
+          points.rotation.y += 0.0015;
+          points.rotation.x += 0.0006;
         }
         renderer.render(scene, camera);
         if (!prefersReducedMotion) {

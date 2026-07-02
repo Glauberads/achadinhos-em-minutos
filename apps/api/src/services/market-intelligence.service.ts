@@ -1,6 +1,7 @@
 import { MarketIntelligenceInputDTO, MarketIntelligenceOutputDTO, marketIntelligenceSchema, marketIntelligenceOutputSchema } from '../validators/creative-os.validator';
 import { featureFlagService } from './feature-flag.service';
 import { telemetryService } from './telemetry.service';
+import { aiProvider } from '../providers/ai/ai-factory';
 
 export class MarketIntelligenceService {
   /**
@@ -23,35 +24,25 @@ export class MarketIntelligenceService {
     try {
       telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 0, metadata: { action: 'started', niche: parsedInput.niche } });
 
-      // TODO (Block 3): Integrar com OpenAI / Market APIs
-      
-      // MOCK IMPLEMENTATION (Block 2)
-      let targetAudience = 'Público Geral';
-      const painPoints: string[] = [];
-      const marketTrends: string[] = ['Vídeos curtos estilo UGC', 'Prova social forte'];
+      const prompt = `
+        Aja como um especialista em Neuromarketing e Vendas de Alta Conversão.
+        O nicho do produto é: ${parsedInput.niche}
+        O preço é: R$ ${parsedInput.price ?? 'Desconhecido'}
 
-      const nicheLower = parsedInput.niche.toLowerCase();
-      
-      if (nicheLower.includes('beleza') || nicheLower.includes('skincare')) {
-        targetAudience = 'Mulheres 18-35 anos';
-        painPoints.push('Problemas de pele', 'Falta de tempo para rotina longa', 'Preço alto de produtos importados');
-        marketTrends.push('Rotinas minimalistas', 'Ingredientes naturais');
-      } else if (nicheLower.includes('tecnologia') || nicheLower.includes('eletrônico')) {
-        targetAudience = 'Homens e Mulheres 18-40 anos';
-        painPoints.push('Equipamento antigo lento', 'Cabos quebrando facilmente');
-        marketTrends.push('Gadgets sem fio', 'Custo benefício');
-      } else {
-        painPoints.push('Preço alto no varejo tradicional', 'Desconfiança na qualidade online');
-      }
+        Responda ESTRITAMENTE num objeto JSON com as seguintes chaves:
+        - targetAudience (string): Quem é o público ideal (ex: "Mulheres de 25-45 anos").
+        - painPoints (array de string): As 3 maiores dores que esse produto resolve.
+        - marketTrends (array de string): As 2 maiores tendências de compra deste nicho hoje.
+      `;
 
-      if (parsedInput.price && parsedInput.price < 50) {
-        marketTrends.push('Compras por impulso');
-      }
+      const responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
+      const cleanJson = responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '');
+      const parsedAi = JSON.parse(cleanJson);
 
       const mockResult: MarketIntelligenceOutputDTO = {
-        targetAudience,
-        painPoints,
-        marketTrends
+        targetAudience: parsedAi.targetAudience ?? 'Público Geral',
+        painPoints: parsedAi.painPoints ?? ['Dores não encontradas'],
+        marketTrends: parsedAi.marketTrends ?? ['Alta conversão']
       };
 
       // Validate Output

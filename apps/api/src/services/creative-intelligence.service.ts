@@ -44,23 +44,22 @@ export class CreativeIntelligenceService {
     try {
       telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 0, metadata: { action: 'started', platform: parsedInput.platform } });
 
-      // MOCK IMPLEMENTATION (Block 2)
-      let bestPractices: string[] = [];
-      let bannedWords: string[] = ['comprar', 'promoção'];
+      const prompt = `
+        Aja como o Diretor de Criação de uma agência de tráfego pago focado na plataforma: ${parsedInput.platform}.
+        Público-alvo: ${parsedInput.audience || 'Geral'}
 
-      if (parsedInput.platform === 'tiktok') {
-        bestPractices = ['Uso de músicas virais em background', 'Cortes rápidos nos primeiros 3 segundos', 'Legendas dinâmicas'];
-        bannedWords.push('link na bio', 'compre agora');
-      } else if (parsedInput.platform === 'reels') {
-        bestPractices = ['Alta qualidade visual', 'Estilo lifestyle', 'Uso de stickers nativos'];
-        bannedWords.push('tiktok');
-      } else {
-        bestPractices = ['Mensagem direta e reta', 'Loop infinito perfeito'];
-      }
+        Responda ESTRITAMENTE num objeto JSON com:
+        - bestPractices (array de string): As 3 maiores boas práticas de criativos nessa rede social hoje.
+        - bannedWords (array de string): 3 a 5 palavras que sofrem shadowban ou derrubam a conversão (ex: "comprar", "link na bio").
+      `;
+
+      const responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
+      const cleanJson = responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '');
+      const parsedAi = JSON.parse(cleanJson);
 
       const mockResult: CreativeIntelligenceOutputDTO = {
-        bestPractices,
-        bannedWords
+        bestPractices: parsedAi.bestPractices ?? ['Vídeo dinâmico'],
+        bannedWords: parsedAi.bannedWords ?? []
       };
 
       const validatedOutput = creativeIntelligenceOutputSchema.parse(mockResult);

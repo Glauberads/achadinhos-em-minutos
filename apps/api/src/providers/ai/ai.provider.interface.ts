@@ -2,5 +2,11 @@ export interface AIProvider {
   /**
    * Envia um prompt para a IA e retorna a resposta formatada ou crua.
    */
-  generateContent(prompt: string, options?: { jsonMode?: boolean }): Promise<string>;
+  generateContent(prompt: string, options?: { 
+    jsonMode?: boolean;
+    image?: {
+      mimeType: string;
+      data: string; // base64
+    }
+  }): Promise<string>;
 }

@@ -7,13 +7,30 @@ export class GeminiProvider implements AIProvider {
     this.apiKey = process.env.GEMINI_API_KEY || '';
   }
 
-  async generateContent(prompt: string, options?: { jsonMode?: boolean }): Promise<string> {
+  async generateContent(prompt: string, options?: { 
+    jsonMode?: boolean;
+    image?: {
+      mimeType: string;
+      data: string;
+    }
+  }): Promise<string> {
     if (!this.apiKey) {
       throw new Error('GEMINI_API_KEY not configured');
     }
 
+    const parts: any[] = [{ text: prompt }];
+
+    if (options?.image) {
+      parts.unshift({
+        inlineData: {
+          mimeType: options.image.mimeType,
+          data: options.image.data
+        }
+      });
+    }
+
     const payload: any = {
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ parts }],
     };
 
     if (options?.jsonMode) {

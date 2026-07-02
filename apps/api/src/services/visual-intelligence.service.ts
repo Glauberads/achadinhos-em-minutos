@@ -1,6 +1,7 @@
 import { VisualIntelligenceInputDTO, VisualIntelligenceOutputDTO, visualIntelligenceSchema, visualIntelligenceOutputSchema } from '../validators/creative-os.validator';
 import { featureFlagService } from './feature-flag.service';
 import { telemetryService } from './telemetry.service';
+import { aiProvider } from '../providers/ai/ai-factory';
 
 export class VisualIntelligenceService {
   /**
@@ -23,24 +24,51 @@ export class VisualIntelligenceService {
     try {
       telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 0, metadata: { action: 'started', url: parsedInput.imageUrl } });
 
-      // TODO (Block 3): Integrar com OpenAI Vision API ou Gemini
-      
-      // MOCK IMPLEMENTATION (Block 2)
-      // Usando heurística básica pelo nome do produto ou URL
-      const hasFace = parsedInput.productName?.toLowerCase().includes('modelo') || false;
-      const dominantColors = ['#1E40AF', '#F3F4F6']; // Cores simuladas
-      const qualityScore = Math.floor(Math.random() * (98 - 75 + 1) + 75); // Score aleatório entre 75 e 98
-      
-      let suggestedFocus = 'Produto no centro';
-      if (hasFace) {
-        suggestedFocus = 'Rosto e expressão humana';
+      let base64Image: string | undefined;
+      let mimeType: string = 'image/jpeg';
+
+      if (parsedInput.imageUrl) {
+        try {
+          const imgResponse = await fetch(parsedInput.imageUrl);
+          if (imgResponse.ok) {
+            const arrayBuffer = await imgResponse.arrayBuffer();
+            base64Image = Buffer.from(arrayBuffer).toString('base64');
+            mimeType = imgResponse.headers.get('content-type') || 'image/jpeg';
+          }
+        } catch (err) {
+          console.warn('[Visual Intelligence] Failed to fetch image, using text-only fallback', err);
+        }
       }
 
+      const prompt = `
+        Analise esta imagem de produto para e-commerce.
+        Título original: ${parsedInput.productName || 'Desconhecido'}
+
+        Responda ESTRITAMENTE num objeto JSON com os seguintes campos:
+        - hasFace (boolean): true se houver uma pessoa ou rosto visível.
+        - dominantColors (array de string): 2 a 3 cores em formato HEX predominantes.
+        - qualityScore (number): nota de 0 a 100 estimando a qualidade visual/resolução.
+        - suggestedFocus (string): breve descrição de onde o foco do layout deve ficar (ex: "Produto no centro").
+      `;
+
+      let responseText: string;
+      if (base64Image) {
+        responseText = await aiProvider.generateContent(prompt, { 
+          jsonMode: true, 
+          image: { mimeType, data: base64Image } 
+        });
+      } else {
+        responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
+      }
+
+      const cleanJson = responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '');
+      const parsedAi = JSON.parse(cleanJson);
+
       const mockResult: VisualIntelligenceOutputDTO = {
-        hasFace,
-        dominantColors,
-        qualityScore,
-        suggestedFocus
+        hasFace: parsedAi.hasFace ?? false,
+        dominantColors: parsedAi.dominantColors ?? ['#000000', '#FFFFFF'],
+        qualityScore: parsedAi.qualityScore ?? 75,
+        suggestedFocus: parsedAi.suggestedFocus ?? 'Produto'
       };
 
       // Validate Output
@@ -49,8 +77,8 @@ export class VisualIntelligenceService {
       telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 500, metadata: { 
         action: 'success',
         url: parsedInput.imageUrl,
-        mode: 'mock',
-        qualityScore
+        mode: 'real_ai',
+        qualityScore: validatedOutput.qualityScore
       }});
 
       return validatedOutput;

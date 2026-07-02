@@ -5,7 +5,7 @@ import { z } from 'zod';
 // ==========================================
 
 export const visualIntelligenceSchema = z.object({
-  imageUrl: z.string().url(),
+  imageUrl: z.string().url().optional().or(z.literal('')),
   productName: z.string().optional()
 });
 export type VisualIntelligenceInputDTO = z.infer<typeof visualIntelligenceSchema>;
@@ -176,6 +176,22 @@ export const motionEngineOutputSchema = z.object({
   }))
 });
 export type MotionEngineOutputDTO = z.infer<typeof motionEngineOutputSchema>;
+
+
+// ==========================================
+// EXECUTION PLANNER (Consolidado)
+// ==========================================
+
+export const executionPlannerOutputSchema = z.object({
+  layout: layoutEngineOutputSchema,
+  typography: typographyEngineOutputSchema,
+  color: colorEngineOutputSchema,
+  hook: hookEngineOutputSchema,
+  cta: ctaEngineOutputSchema,
+  storyboard: storyboardEngineOutputSchema,
+  motion: motionEngineOutputSchema
+});
+export type ExecutionPlannerOutputDTO = z.infer<typeof executionPlannerOutputSchema>;
 
 
 // ==========================================

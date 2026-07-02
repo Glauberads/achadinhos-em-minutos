@@ -4,6 +4,9 @@ import { creativeIntelligenceService } from '../src/services/creative-intelligen
 import { creativeStrategyService } from '../src/services/creative-strategy.service';
 import { learningEngineService } from '../src/services/learning-engine.service';
 import { featureFlagService } from '../src/services/feature-flag.service';
+import { executionPlannerService } from '../src/services/engines/execution-planner.service';
+import { creativeReviewerService } from '../src/services/engines/creative-reviewer.service';
+import { creativeOsOrchestrator } from '../src/services/creative-os.orchestrator';
 import { config } from 'dotenv';
 config();
 
@@ -51,6 +54,19 @@ async function runTests() {
     console.log('--- CREATIVE DNA FINAL ---');
     console.log(strategyData);
 
+    // 4.5 Execution Planner
+    console.log('\n[4.5] Executando Execution Planner (Consolidado)...');
+    const executionPlan = await executionPlannerService.planExecution(strategyData);
+    console.log('--- EXECUTION PLAN (Parcial) ---');
+    console.log('Hook:', executionPlan.hook);
+    console.log('Color:', executionPlan.color);
+
+    // 4.6 Reviewer
+    console.log('\n[4.6] Executando Reviewer (Dual Score)...');
+    const review = await creativeReviewerService.review(executionPlan);
+    console.log('--- REVIEW RESULTS ---');
+    console.log(review);
+
     // 5. Learning Engine
     console.log('\n[5/5] Executando Learning Engine...');
     const learningData = await learningEngineService.learnFromCreativeOS({
@@ -62,6 +78,16 @@ async function runTests() {
       }
     });
     console.log('Learning Insights:', learningData);
+
+    console.log('\n[TESTE DO ORQUESTRADOR]');
+    console.log('Iniciando o Orquestrador Completo...');
+    const orchestratorResult = await creativeOsOrchestrator.generate({
+      niche: 'Moda e Acessórios',
+      platform: 'reels',
+      price: 199.90,
+      productName: 'Bolsa de Couro Luxo'
+    });
+    console.log('Metadata Final do Orquestrador:', orchestratorResult.metadata);
 
     console.log('\n✅ Todos os testes concluídos com sucesso! Zod validation OK.');
 

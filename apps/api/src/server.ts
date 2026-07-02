@@ -10,6 +10,8 @@ import { cacheRoutes } from './routes/cache';
 import { featureFlagsRoutes } from './routes/feature-flags';
 import { dashboardRoutes } from './routes/dashboard';
 import { creativeRoutes } from './routes/creatives';
+import { checkoutRoutes } from './routes/checkout';
+import { webhookRoutes } from './routes/webhooks';
 import { registerEvents } from './events/event-registry';
 
 // Inicializar workers
@@ -192,6 +194,8 @@ server.register(cacheRoutes, { prefix: '/api/cache' });
 server.register(featureFlagsRoutes, { prefix: '/api/feature-flags' });
 server.register(dashboardRoutes, { prefix: '/api/dashboard' });
 server.register(creativeRoutes, { prefix: '/api/creatives' });
+server.register(checkoutRoutes, { prefix: '/api/checkout' });
+server.register(webhookRoutes, { prefix: '/webhooks' });
 
 // ============================
 // Iniciar Servidor

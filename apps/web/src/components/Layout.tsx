@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   Wand2,
   BarChart3,
-  Terminal
+  Terminal,
+  CreditCard
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { OnboardingModal } from './ui/onboarding'
@@ -73,6 +74,7 @@ export function Layout() {
     { name: 'Auditoria', path: '/audit-logs', icon: ShieldCheck },
     { name: 'System Reports', path: '/system/reports', icon: BarChart3 },
     { name: 'Logs do Sistema', path: '/system/logs', icon: Terminal },
+    { name: 'Gateways', path: '/gateways', icon: CreditCard },
     { name: 'Configurações', path: '/config', icon: Settings },
   ]
 

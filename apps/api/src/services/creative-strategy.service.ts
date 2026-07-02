@@ -6,6 +6,7 @@ import {
 } from '../validators/creative-os.validator';
 import { featureFlagService } from './feature-flag.service';
 import { telemetryService } from './telemetry.service';
+import { aiProvider } from '../providers/ai/ai-factory';
 
 export class CreativeStrategyService {
   /**
@@ -29,41 +30,37 @@ export class CreativeStrategyService {
         targetAudience: parsedInput.marketData.targetAudience
       }});
 
-      // MOCK IMPLEMENTATION (Block 2)
-      // Consolidação simulada
-      let angle = 'Oferta Irresistível';
-      let toneOfVoice = 'Urgente e Empolgante';
-      let durationSeconds = 15;
-      let coreMessage = 'Compre agora antes que acabe!';
+      const prompt = `
+        Aja como o Diretor de Estratégia de uma agência de marketing de conversão.
+        Sua função é consolidar o DNA Criativo do produto baseado nos seguintes insumos:
+        - Dados Visuais: Rosto Humano: ${parsedInput.visualData.hasFace}, Qualidade: ${parsedInput.visualData.qualityScore}, Foco: ${parsedInput.visualData.suggestedFocus}
+        - Mercado: Dores: ${parsedInput.marketData.painPoints.join(', ')}, Público: ${parsedInput.marketData.targetAudience}
+        - Plataforma: Boas práticas: ${parsedInput.creativeData.bestPractices.join(', ')}
 
-      // Simular lógica de cruzamento
-      if (parsedInput.marketData.painPoints.length > 0) {
-        angle = `Solução para ${parsedInput.marketData.painPoints[0]}`;
-        toneOfVoice = 'Empático e Direto';
-      }
+        Retorne ESTRITAMENTE um objeto JSON contendo:
+        - angle (string): O ângulo de vendas principal.
+        - toneOfVoice (string): O tom de voz (ex: "Urgente e Empático").
+        - durationSeconds (number): A duração ideal do vídeo em segundos (ex: 15).
+        - coreMessage (string): A mensagem principal que deve ficar clara em uma frase.
+      `;
 
-      if (parsedInput.creativeData.bestPractices.some(bp => bp.toLowerCase().includes('rápido'))) {
-        durationSeconds = 10;
-      }
-
-      if (parsedInput.visualData.qualityScore > 90) {
-        coreMessage = 'Qualidade Premium garantida.';
-        toneOfVoice = 'Sofisticado';
-      }
+      const responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
+      const cleanJson = responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '');
+      const parsedAi = JSON.parse(cleanJson);
 
       const mockResult: CreativeStrategyOutputDTO = {
-        angle,
-        toneOfVoice,
-        durationSeconds,
-        coreMessage
+        angle: parsedAi.angle ?? 'Desconto Imperdível',
+        toneOfVoice: parsedAi.toneOfVoice ?? 'Urgente',
+        durationSeconds: parsedAi.durationSeconds ?? 15,
+        coreMessage: parsedAi.coreMessage ?? 'Compre agora.'
       };
 
       const validatedOutput = creativeStrategyOutputSchema.parse(mockResult);
 
       telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 500, metadata: { 
         action: 'success',
-        angle,
-        mode: 'mock'
+        angle: validatedOutput.angle,
+        mode: 'real_ai'
       }});
 
       return validatedOutput;

@@ -1,6 +1,9 @@
 import { aiProvider } from '../providers/ai/ai-factory';
 import { redisConnection } from '../lib/redis';
 import crypto from 'crypto';
+import { CreativeIntelligenceInputDTO, CreativeIntelligenceOutputDTO, creativeIntelligenceSchema, creativeIntelligenceOutputSchema } from '../validators/creative-os.validator';
+import { featureFlagService } from './feature-flag.service';
+import { telemetryService } from './telemetry.service';
 
 export interface IntelligenceAnalysis {
   buyer_persona: any;
@@ -23,6 +26,66 @@ export interface IntelligenceAnalysis {
 
 export class CreativeIntelligenceService {
   private memoryCache = new Map<string, { data: IntelligenceAnalysis; expires: number }>();
+
+  /**
+   * [NOVO FLUXO - CREATIVE OS]
+   * Analisa dados criativos da plataforma e público.
+   * [EXPERIMENTAL] - Protegido pela flag 'creative_os'.
+   */
+  async analyzeForCreativeOS(input: CreativeIntelligenceInputDTO): Promise<CreativeIntelligenceOutputDTO> {
+    const isCreativeOsEnabled = await featureFlagService.isEnabled('creative_os');
+    const parsedInput = creativeIntelligenceSchema.parse(input);
+
+    if (!isCreativeOsEnabled) {
+      telemetryService.log({ operation_type: 'AI_GENERATION', status: 'FALLBACK', total_time_ms: 0, metadata: { action: 'skipped', platform: parsedInput.platform } });
+      return this.getFallbackCreativeOSAnalysis();
+    }
+
+    try {
+      telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 0, metadata: { action: 'started', platform: parsedInput.platform } });
+
+      // MOCK IMPLEMENTATION (Block 2)
+      let bestPractices: string[] = [];
+      let bannedWords: string[] = ['comprar', 'promoção'];
+
+      if (parsedInput.platform === 'tiktok') {
+        bestPractices = ['Uso de músicas virais em background', 'Cortes rápidos nos primeiros 3 segundos', 'Legendas dinâmicas'];
+        bannedWords.push('link na bio', 'compre agora');
+      } else if (parsedInput.platform === 'reels') {
+        bestPractices = ['Alta qualidade visual', 'Estilo lifestyle', 'Uso de stickers nativos'];
+        bannedWords.push('tiktok');
+      } else {
+        bestPractices = ['Mensagem direta e reta', 'Loop infinito perfeito'];
+      }
+
+      const mockResult: CreativeIntelligenceOutputDTO = {
+        bestPractices,
+        bannedWords
+      };
+
+      const validatedOutput = creativeIntelligenceOutputSchema.parse(mockResult);
+
+      telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 500, metadata: { 
+        action: 'success',
+        platform: parsedInput.platform,
+        mode: 'mock'
+      }});
+
+      return validatedOutput;
+    } catch (error: any) {
+      telemetryService.log({ operation_type: 'AI_GENERATION', status: 'ERROR', total_time_ms: 0, error_message: error.message, metadata: {
+        platform: parsedInput.platform
+      }});
+      return this.getFallbackCreativeOSAnalysis();
+    }
+  }
+
+  private getFallbackCreativeOSAnalysis(): CreativeIntelligenceOutputDTO {
+    return {
+      bestPractices: ['Cortes rápidos', 'Alta energia'],
+      bannedWords: []
+    };
+  }
 
   async analyzeProduct(product: any): Promise<IntelligenceAnalysis> {
     const productHash = crypto.createHash('sha256').update(product.id || product.url).digest('hex');

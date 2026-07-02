@@ -14,6 +14,7 @@ Antes de invocar o LLM (Large Language Model), o sistema garante que possua insu
 
 A V2 da nossa arquitetura divide o cérebro em agentes especialistas (Engines).
 > **Nota de Evolução (V3):** Estamos implementando o *Creative OS* (atrás da feature flag `creative_os`). Na V3, o pipeline ganha novos motores (Layout, Color, Typography, etc) e é validado pelo `CreativeReviewer` com `Dual Score`. O fluxo V2 atua como fallback.
+> **Status atual (Bloco 2)**: Os motores analíticos iniciais foram criados (`Implemented with Mock Intelligence`). A integração real com LLM para o Creative OS está `Planned for next block`.
 
 ```mermaid
 graph TD
@@ -49,7 +50,7 @@ graph TD
 - Um passe final (Self-Correction). A IA avalia se a resposta final estourou o tempo de leitura do TikTok/Reels, se parece um "vendedor robótico", e aplica punição. O sistema tenta refazer o roteiro até no máximo 3 vezes (Max Retries) se reprovado.
 
 ## 3. Componente de Avaliação Contínua
-- **Learning Engine (Em Construção)**: Pipeline futuro que receberá dados analíticos (Cliques, Views, Compras) e mutará os templates do "Marketing Brain", alimentando o banco de dados vetorial de exemplos bem-sucedidos.
+- **Learning Engine**: Pipeline que recebe dados analíticos (Cliques, Views, Compras) e mutará os templates. **Status (Bloco 2)**: `Implemented with Mock Intelligence` (stub funcional criado), integração pesada `Planned for next block`.
 
 ## 4. O Output (Metadados do Criativo)
 O resultado do pipeline não é um texto puro, e sim uma estrutura JSON estrita salva na coluna `metadata` da tabela `creatives`.

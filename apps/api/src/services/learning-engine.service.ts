@@ -1,5 +1,7 @@
 import { supabaseAdmin } from '../lib/supabase';
-
+import { featureFlagService } from './feature-flag.service';
+import { telemetryService } from './telemetry.service';
+import { LearningEngineInputDTO, LearningEngineOutputDTO, learningEngineSchema, learningEngineOutputSchema } from '../validators/creative-os.validator';
 export interface CreativeAnalyticsPayload {
   creative_id: string;
   user_id: string;
@@ -22,6 +24,53 @@ export interface CreativeAnalyticsPayload {
 }
 
 export class LearningEngineService {
+  /**
+   * [NOVO FLUXO - CREATIVE OS]
+   * Registra e aprende com a performance dos criativos.
+   * [EXPERIMENTAL] - Protegido pela flag 'creative_os'.
+   */
+  async learnFromCreativeOS(input: LearningEngineInputDTO): Promise<LearningEngineOutputDTO> {
+    const isCreativeOsEnabled = await featureFlagService.isEnabled('creative_os');
+    const parsedInput = learningEngineSchema.parse(input);
+
+    if (!isCreativeOsEnabled) {
+      telemetryService.log({ operation_type: 'AI_GENERATION', status: 'FALLBACK', total_time_ms: 0, metadata: { action: 'skipped', creativeId: parsedInput.creativeId } });
+      return { success: false, insightsGenerated: 0 };
+    }
+
+    try {
+      telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 0, metadata: { action: 'started', creativeId: parsedInput.creativeId } });
+
+      // MOCK IMPLEMENTATION (Block 2)
+      // Simula a geração de insights baseada nos dados passados
+      let insights = 0;
+      if (parsedInput.performanceMetrics.ctr > 2) {
+        insights = 2; // Simula a descoberta de 2 padrões
+      }
+
+      const mockResult: LearningEngineOutputDTO = {
+        success: true,
+        insightsGenerated: insights
+      };
+
+      const validatedOutput = learningEngineOutputSchema.parse(mockResult);
+
+      telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 500, metadata: { 
+        action: 'success',
+        creativeId: parsedInput.creativeId,
+        mode: 'stub',
+        insights
+      }});
+
+      return validatedOutput;
+    } catch (error: any) {
+      telemetryService.log({ operation_type: 'AI_GENERATION', status: 'ERROR', total_time_ms: 0, error_message: error.message, metadata: {
+        creativeId: parsedInput.creativeId
+      }});
+      return { success: false, insightsGenerated: 0 };
+    }
+  }
+
   async registerMetrics(payload: CreativeAnalyticsPayload) {
     const ctr = payload.views ? (payload.clicks || 0) / payload.views * 100 : 0;
 

@@ -46,7 +46,8 @@ O projeto está organizado como um monorepo tradicional, utilizando `pnpm worksp
 
 ### Creative Studio AI (e Creative OS)
 O coração da plataforma. Responsável pela transformação de URLs de produtos em mídia viral. A arquitetura atual (V2) engloba o _Marketing Brain_ (planejamento), _Template Engine_, e o fluxo de _Fallback_ de extração. O foco é a geração em múltiplas etapas (Brain -> Planner -> Analyzer -> Renderer).
-**Nota sobre a Transição:** Estamos em transição para a V3, o **Creative OS** (atualmente protegido pela feature flag `creative_os`). O Creative OS adota um pipeline desacoplado e multi-motores (ex: Layout Engine, Color Engine, Hook Engine) avaliados por um sistema de *Dual Score*. Se a flag estiver inativa ou ocorrerem erros, o pipeline atual permanece operando nativamente como fallback.
+**Nota sobre a Transição:** Estamos em transição para a V3, o **Creative OS** (atualmente protegido pela feature flag `creative_os`). O Creative OS adota um pipeline desacoplado e multi-motores (ex: Layout Engine, Color Engine, Hook Engine) avaliados por um sistema de *Dual Score*. 
+**Status atual (Bloco 2)**: Os motores analíticos iniciais foram criados sob o regime `Implemented with Mock Intelligence` (stub funcional). A integração pesada com LLMs ocorrerá no bloco seguinte. Se a flag estiver inativa ou ocorrerem erros, o pipeline V2 atual permanece operando nativamente como fallback.
 
 ### Campaigns & Scheduled Posts
 Módulo de distribuição de conteúdo. Permite que os usuários agendem e disparem em massa os criativos gerados diretamente para canais e grupos de Telegram, gerenciando limites de uso e log de entrega.

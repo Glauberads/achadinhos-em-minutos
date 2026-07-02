@@ -15,15 +15,27 @@ export function Login() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
     if (error) {
       setError(error.message)
+    } else if (authData.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .single()
+
+      if (profile?.role === 'super_admin') {
+        navigate('/system/operation-center')
+      } else {
+        navigate('/dashboard')
+      }
     } else {
-      navigate('/')
+      navigate('/dashboard')
     }
     setLoading(false)
   }

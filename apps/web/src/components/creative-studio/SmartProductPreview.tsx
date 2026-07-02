@@ -22,7 +22,7 @@ interface Props {
 
 export function SmartProductPreview({ product, onGenerate, isLoading, isCached }: Props) {
   const coverImage = product.images?.[0] || 'https://placehold.co/600x800?text=Sem+Imagem';
-  const score = useMemo(() => product.opportunityScore || Math.floor(Math.random() * 20) + 80, [product.opportunityScore]); 
+  const score = product.opportunityScore || 85; 
 
   return (
     <motion.div 

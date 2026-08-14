@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../lib/supabase';
+import { CreativeDnaV2 } from '@achadinhos/shared';
 
 export interface CreativeData {
   id?: string;
@@ -23,7 +24,7 @@ export interface CreativeData {
   // V2 Fields
   parent_id?: string | null;
   buyer_persona?: any;
-  creative_dna?: any;
+  creative_dna?: CreativeDnaV2;
   quality_scores?: any;
   conversion_score?: number;
 }

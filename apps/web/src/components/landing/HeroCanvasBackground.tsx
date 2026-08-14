@@ -6,7 +6,8 @@ export default function HeroCanvasBackground() {
   const [webGLSupported, setWebGLSupported] = useState(true);
 
   useEffect(() => {
-    if (!mountRef.current) return;
+    const mountNode = mountRef.current;
+    if (!mountNode) return;
 
     let renderer: THREE.WebGLRenderer;
     let scene: THREE.Scene;
@@ -28,7 +29,7 @@ export default function HeroCanvasBackground() {
       renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      mountRef.current.appendChild(renderer.domElement);
+      mountNode.appendChild(renderer.domElement);
 
       // 3. Criar Geometria e Partículas
       const geometry = new THREE.BufferGeometry();
@@ -84,8 +85,8 @@ export default function HeroCanvasBackground() {
         window.removeEventListener('resize', handleResize);
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
         
-        if (mountRef.current && renderer) {
-          mountRef.current.removeChild(renderer.domElement);
+        if (mountNode && renderer) {
+          mountNode.removeChild(renderer.domElement);
         }
         
         geometry.dispose();

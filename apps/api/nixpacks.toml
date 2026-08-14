@@ -1,0 +1,28 @@
+# Nixpacks Configuration
+# Esta configuração é uma alternativa ao Dockerfile.
+# O Dockerfile ainda é o método principal e preferido de build.
+
+[providers]
+node = true
+
+[variables]
+NODE_ENV = 'production'
+NIXPACKS_NODE_VERSION = '20'
+
+[phases.setup]
+nixPkgs = [
+  "ffmpeg",
+  "curl",
+  "imagemagick",
+  "fontconfig",
+  "dejavu_fonts"
+]
+
+[phases.install]
+cmds = ["npm install -g pnpm", "pnpm install"]
+
+[phases.build]
+cmds = ["pnpm run build"]
+
+[start]
+cmd = "npm run start:api"

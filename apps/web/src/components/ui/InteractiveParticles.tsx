@@ -13,7 +13,7 @@ export function InteractiveParticles() {
     let particles: Particle[] = [];
     let animationFrameId: number;
     
-    let mouse = { x: -1000, y: -1000, radius: 150 };
+    const mouse = { x: -1000, y: -1000, radius: 150 };
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -56,15 +56,15 @@ export function InteractiveParticles() {
         if (this.baseX < 0) this.baseX = canvas!.width;
         if (this.baseX > canvas!.width) this.baseX = 0;
         
-        let dx = mouse.x - this.x;
-        let dy = mouse.y - this.y;
-        let distance = Math.sqrt(dx * dx + dy * dy);
-        let forceDirectionX = dx / distance;
-        let forceDirectionY = dy / distance;
-        let maxDistance = mouse.radius;
-        let force = (maxDistance - distance) / maxDistance;
-        let directionX = forceDirectionX * force * this.density;
-        let directionY = forceDirectionY * force * this.density;
+        const dx = mouse.x - this.x;
+        const dy = mouse.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const forceDirectionX = dx / distance;
+        const forceDirectionY = dy / distance;
+        const maxDistance = mouse.radius;
+        const force = (maxDistance - distance) / maxDistance;
+        const directionX = forceDirectionX * force * this.density;
+        const directionY = forceDirectionY * force * this.density;
 
         if (distance < mouse.radius) {
           // O mouse repele levemente as partículas para criar interação
@@ -72,11 +72,11 @@ export function InteractiveParticles() {
           this.y -= directionY;
         } else {
           if (this.x !== this.baseX) {
-            let dx = this.x - this.baseX;
+            const dx = this.x - this.baseX;
             this.x -= dx / 20;
           }
           if (this.y !== this.baseY) {
-            let dy = this.y - this.baseY;
+            const dy = this.y - this.baseY;
             this.y -= dy / 20;
           }
         }
@@ -85,10 +85,10 @@ export function InteractiveParticles() {
 
     const init = () => {
       particles = [];
-      let numberOfParticles = (canvas.width * canvas.height) / 12000;
+      const numberOfParticles = (canvas.width * canvas.height) / 12000;
       for (let i = 0; i < numberOfParticles; i++) {
-        let x = Math.random() * canvas.width;
-        let y = Math.random() * canvas.height;
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
         particles.push(new Particle(x, y));
       }
     };
@@ -104,10 +104,10 @@ export function InteractiveParticles() {
     };
 
     const connect = () => {
-      let opacityValue = 1;
+      let opacityValue;
       for (let a = 0; a < particles.length; a++) {
         for (let b = a; b < particles.length; b++) {
-          let distance = ((particles[a].x - particles[b].x) * (particles[a].x - particles[b].x))
+          const distance = ((particles[a].x - particles[b].x) * (particles[a].x - particles[b].x))
             + ((particles[a].y - particles[b].y) * (particles[a].y - particles[b].y));
           if (distance < (canvas.width / 15) * (canvas.height / 15)) {
             opacityValue = 1 - (distance / 8000);

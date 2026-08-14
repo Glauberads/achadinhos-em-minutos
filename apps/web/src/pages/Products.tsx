@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Send, X, Image as ImageIcon, ExternalLink, RefreshCw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
+import { useToast } from '../components/ui/toast'
 
 type Product = {
   id: string
@@ -23,6 +24,7 @@ type Group = {
 }
 
 export function Products() {
+  const { toast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [groups, setGroups] = useState<Group[]>([])
@@ -30,6 +32,8 @@ export function Products() {
   // Modal states
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isTestOpen, setIsTestOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<string | null>(null)
   const [currentProduct, setCurrentProduct] = useState<Partial<Product> | null>(null)
   
   // Form submission state
@@ -114,12 +118,18 @@ export function Products() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja deletar este produto?')) return
+    setProductToDelete(id)
+    setIsDeleteOpen(true)
+  }
 
-    const { error } = await supabase.from('products').delete().eq('id', id)
+  const confirmDelete = async () => {
+    if (!productToDelete) return
+    setIsDeleteOpen(false)
+    const { error } = await supabase.from('products').delete().eq('id', productToDelete)
     if (error) {
-      alert('Erro ao deletar: ' + error.message)
+      toast('Erro ao deletar: ' + error.message, 'error')
     } else {
+      toast('Produto excluído com sucesso!', 'success')
       fetchProducts()
     }
   }
@@ -404,6 +414,20 @@ export function Products() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirm Modal */}
+        {isDeleteOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700 p-6 text-center">
+              <h3 className="font-bold text-lg mb-2">Excluir Produto?</h3>
+              <p className="text-gray-500 text-sm mb-6">Esta ação não pode ser desfeita.</p>
+              <div className="flex justify-center gap-3">
+                <button onClick={() => setIsDeleteOpen(false)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700">Cancelar</button>
+                <button onClick={confirmDelete} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium text-white">Sim, excluir</button>
+              </div>
             </div>
           </div>
         )}

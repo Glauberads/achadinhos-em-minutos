@@ -3,6 +3,7 @@ import { Send, Store, Key, ShieldCheck, ShieldAlert, CheckCircle2, ChevronRight 
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { useNavigate } from 'react-router-dom'
+import { useToast } from '../components/ui/toast'
 
 interface IntegrationStatus {
   platform: string;
@@ -16,6 +17,7 @@ interface IntegrationStatus {
 }
 
 export function Integrations() {
+  const { toast } = useToast()
   const navigate = useNavigate()
   const [statuses, setStatuses] = useState<IntegrationStatus[]>([])
   const [loading, setLoading] = useState(true)
@@ -75,7 +77,7 @@ export function Integrations() {
         fetchStatuses()
       }
     } catch (err: any) {
-      alert('Erro ao salvar: ' + (err.response?.data?.error || err.message))
+      toast('Erro ao salvar: ' + (err.response?.data?.error || err.message), 'error')
     } finally {
       setSaving(false)
     }

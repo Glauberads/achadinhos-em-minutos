@@ -45,12 +45,11 @@ export class ExecutionPlannerService {
         }
       `;
 
-      const responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
-      const cleanJson = responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '');
-      const parsedAi = JSON.parse(cleanJson);
-
-      // Safe Parse
-      const validatedOutput = executionPlannerOutputSchema.parse(parsedAi);
+      const validatedOutput = await aiProvider.generateStructured<ExecutionPlannerOutputDTO>({
+        prompt,
+        schema: executionPlannerOutputSchema,
+        systemInstruction: "Aja como o Diretor de Arte e Copywriter Sênior. Retorne ESTRITAMENTE um objeto JSON."
+      });
 
       telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 500, metadata: { 
         action: 'success',

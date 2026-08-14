@@ -35,23 +35,16 @@ export class MarketIntelligenceService {
         - marketTrends (array de string): As 2 maiores tendências de compra deste nicho hoje.
       `;
 
-      const responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
-      const cleanJson = responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '');
-      const parsedAi = JSON.parse(cleanJson);
+      const validatedOutput = await aiProvider.generateStructured<MarketIntelligenceOutputDTO>({
+        prompt,
+        schema: marketIntelligenceOutputSchema,
+        systemInstruction: "Aja como um especialista em Neuromarketing. Responda ESTRITAMENTE num objeto JSON."
+      });
 
-      const mockResult: MarketIntelligenceOutputDTO = {
-        targetAudience: parsedAi.targetAudience ?? 'Público Geral',
-        painPoints: parsedAi.painPoints ?? ['Dores não encontradas'],
-        marketTrends: parsedAi.marketTrends ?? ['Alta conversão']
-      };
-
-      // Validate Output
-      const validatedOutput = marketIntelligenceOutputSchema.parse(mockResult);
-      
       telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 500, metadata: { 
         action: 'success',
         niche: parsedInput.niche,
-        mode: 'mock'
+        mode: 'ai_structured'
       }});
 
       return validatedOutput;

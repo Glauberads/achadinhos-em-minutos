@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { CreativeIntelligenceInputDTO, CreativeIntelligenceOutputDTO, creativeIntelligenceSchema, creativeIntelligenceOutputSchema } from '../validators/creative-os.validator';
 import { featureFlagService } from './feature-flag.service';
 import { telemetryService } from './telemetry.service';
+import { z } from 'zod';
 
 export interface IntelligenceAnalysis {
   buyer_persona: any;
@@ -53,21 +54,16 @@ export class CreativeIntelligenceService {
         - bannedWords (array de string): 3 a 5 palavras que sofrem shadowban ou derrubam a conversão (ex: "comprar", "link na bio").
       `;
 
-      const responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
-      const cleanJson = responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '');
-      const parsedAi = JSON.parse(cleanJson);
-
-      const mockResult: CreativeIntelligenceOutputDTO = {
-        bestPractices: parsedAi.bestPractices ?? ['Vídeo dinâmico'],
-        bannedWords: parsedAi.bannedWords ?? []
-      };
-
-      const validatedOutput = creativeIntelligenceOutputSchema.parse(mockResult);
+      const validatedOutput = await aiProvider.generateStructured<CreativeIntelligenceOutputDTO>({
+        prompt,
+        schema: creativeIntelligenceOutputSchema,
+        systemInstruction: "Aja como o Diretor de Criação de uma agência de tráfego pago. Retorne os dados ESTRITAMENTE num objeto JSON conforme o schema."
+      });
 
       telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 500, metadata: { 
         action: 'success',
         platform: parsedInput.platform,
-        mode: 'mock'
+        mode: 'ai_structured'
       }});
 
       return validatedOutput;
@@ -133,10 +129,31 @@ export class CreativeIntelligenceService {
       - confidence (numero de 0 a 1 indicando sua confiança na análise)
     `;
 
+    const schema = z.object({
+      buyer_persona: z.any(),
+      pain_points: z.array(z.string()),
+      desires: z.array(z.string()),
+      benefits: z.array(z.string()),
+      objections: z.array(z.string()),
+      emotion: z.string(),
+      urgency_level: z.enum(['high', 'medium', 'low']),
+      recommended_duration: z.number(),
+      conversion_score: z.number(),
+      confidence: z.number(),
+      recommended_style: z.string().optional(),
+      recommended_colors: z.array(z.string()).optional(),
+      recommended_fonts: z.array(z.string()).optional(),
+      recommended_cta: z.string().optional(),
+      recommended_hook: z.string().optional(),
+      recommended_template: z.string().optional()
+    });
+
     try {
-      const responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
-      const parsed = JSON.parse(responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, ''));
-      
+      const parsed = await aiProvider.generateStructured<any>({
+        prompt,
+        schema,
+        systemInstruction: "Você é um especialista em marketing direto. Responda ESTRITAMENTE num objeto JSON."
+      });
       
       const analysisData = {
         ...parsed,
@@ -146,7 +163,7 @@ export class CreativeIntelligenceService {
         recommended_cta: parsed.recommended_cta || 'Compre Agora',
         recommended_hook: parsed.recommended_hook || 'Olha isso!',
         recommended_template: parsed.recommended_template || 'Oferta Relâmpago'
-      };
+      } as IntelligenceAnalysis;
 
       // 3. Salvar Cache
       try {

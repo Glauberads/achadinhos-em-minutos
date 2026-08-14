@@ -21,7 +21,7 @@ function getCreativePreviewImage(creative: any): string {
 export function CreativeStudio() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('gerador');
-  const API_URL = import.meta.env.VITE_API_URL || '';
+  const API_URL = import.meta.env.DEV ? (import.meta.env.VITE_API_URL || '') : '';
   
   // Video Generator State
   const [url, setUrl] = useState('');
@@ -78,6 +78,7 @@ export function CreativeStudio() {
 
   useEffect(() => {
     fetchCreatives();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Initial fetch
 
   useEffect(() => {
@@ -98,6 +99,7 @@ export function CreativeStudio() {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pollingInterval]); // Re-bind when interval changes
 
   useEffect(() => {
@@ -106,6 +108,7 @@ export function CreativeStudio() {
       const timer = setTimeout(() => handleAnalyzeLink(url), 1000);
       return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
 
   const handleAnalyzeLink = async (link: string) => {

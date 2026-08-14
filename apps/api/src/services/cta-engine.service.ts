@@ -1,5 +1,6 @@
 import { MarketingStrategy } from './marketing-brain.service';
 import { IntelligenceAnalysis } from './creative-intelligence.service';
+import { featureFlagService } from './feature-flag.service';
 
 interface CTATemplate {
   text: string;
@@ -18,7 +19,19 @@ export class CTAEngineService {
     { text: "Oferta limitada", tags: ['Escassez'] }
   ];
 
-  generateCTA(analysis: IntelligenceAnalysis, strategy: MarketingStrategy): string {
+  async determineV2CTAStrategy(platform: string, temperature: string): Promise<string> {
+    if (platform === 'TikTok') return 'Curto, direto ao link na bio ou carrinho amarelo';
+    if (platform === 'Instagram Reels') return 'Comente EU QUERO para automação de DM';
+    if (temperature === 'hot') return 'Agressivo com Urgência (Ex: Últimas unidades no link)';
+    return 'Geral focado em Benefício + Ação Direta';
+  }
+
+  async generateCTA(analysis: IntelligenceAnalysis, strategy: MarketingStrategy): Promise<string> {
+    const isV2 = await featureFlagService.isEnabled('creative_intelligence_v2');
+    if (isV2) {
+      return await this.determineV2CTAStrategy('TikTok', 'warm');
+    }
+
     const matches = this.library.filter(cta => 
       cta.tags.includes(strategy.mental_trigger) || 
       cta.tags.includes(strategy.emotion)

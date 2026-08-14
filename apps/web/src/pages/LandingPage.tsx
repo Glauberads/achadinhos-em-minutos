@@ -1,34 +1,44 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/core';
-import { Wand2, ChevronRight } from 'lucide-react';
+import { Wand2 } from 'lucide-react';
 
-import { HeroSection } from '../components/landing/HeroSection';
-import { AutoDemonstration } from '../components/landing/AutoDemonstration';
-import { CreativeOSGrid } from '../components/landing/CreativeOSGrid';
-import { BenefitsBento } from '../components/landing/BenefitsBento';
-import { BeforeAfterTimeline } from '../components/landing/BeforeAfterTimeline';
-import { FormatsGallery } from '../components/landing/FormatsGallery';
-import { SocialProofKpis } from '../components/landing/SocialProofKpis';
+import { HeroProductDemo } from '../components/landing/HeroProductDemo';
+import { ProductToCampaignFlow } from '../components/landing/ProductToCampaignFlow';
+import { CreativeShowcase } from '../components/landing/CreativeShowcase';
+import { CreativeDNAVisualizer } from '../components/landing/CreativeDNAVisualizer';
+import { AIEngineArchitecture } from '../components/landing/AIEngineArchitecture';
+import { BeforeAfterWorkflow } from '../components/landing/BeforeAfterWorkflow';
+import { ProductAngles } from '../components/landing/ProductAngles';
+import { MultiFormatShowcase } from '../components/landing/MultiFormatShowcase';
+import { FinalCTA } from '../components/landing/FinalCTA';
 
 export const LandingPage = () => {
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-zinc-50 selection:bg-indigo-500/30 overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#050508] text-zinc-50 selection:bg-indigo-500/30 overflow-x-hidden font-sans">
       
-      {/* Navbar (Minimalista) */}
-      <nav className="relative z-50 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto border-b border-white/5 bg-transparent">
+      {/* Navbar Premium */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto border-b border-white/5 bg-[#050508]/80 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <Wand2 className="w-6 h-6 text-indigo-400" />
-          <span className="font-bold text-xl tracking-tight">Achadinhos<span className="text-indigo-400">.ai</span></span>
+          <span className="font-bold text-xl tracking-tight text-white">Achadinhos<span className="text-indigo-400">.ai</span></span>
         </div>
+        
+        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
+          <a href="#" className="hover:text-white transition-colors">Produto</a>
+          <a href="#" className="hover:text-white transition-colors">Como funciona</a>
+          <a href="#" className="hover:text-white transition-colors">Creative Intelligence</a>
+          <a href="#" className="hover:text-white transition-colors">Formatos</a>
+        </div>
+
         <div className="flex gap-4">
-          <Link to="/login">
-            <Button variant="ghost" className="text-zinc-400 hover:text-white">Entrar</Button>
+          <Link to="/login" className="hidden md:block">
+            <Button variant="ghost" className="text-zinc-400 hover:text-white h-10 px-6">Entrar</Button>
           </Link>
-          <Link to="/early-access" className="hidden md:block">
-            <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold group shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300 border border-indigo-400/20 relative overflow-hidden rounded-full px-6">
+          <Link to="/early-access">
+            <Button className="h-10 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold group shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:shadow-[0_0_30px_rgba(124,58,237,0.6)] transition-all duration-300 border border-indigo-400/20 relative overflow-hidden rounded-full">
               <span className="relative z-10 flex items-center">
-                Early Access
+                Começar agora
               </span>
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
             </Button>
@@ -36,44 +46,33 @@ export const LandingPage = () => {
         </div>
       </nav>
 
-      <main className="relative z-10 flex flex-col items-center w-full">
-        <HeroSection />
-        <AutoDemonstration />
-        <SocialProofKpis />
-        <CreativeOSGrid />
-        <BeforeAfterTimeline />
-        <BenefitsBento />
-        <FormatsGallery />
-        
-        {/* CTA FINAL (Minimalista e de alto impacto) */}
-        <section className="w-full border-t border-white/5 relative overflow-hidden bg-[#050508]">
-          <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/10 to-transparent pointer-events-none" />
-          <div className="max-w-4xl mx-auto px-6 py-32 text-center relative z-10">
-            <h2 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">O futuro da conversão.</h2>
-            <p className="text-xl text-zinc-400 mb-10 max-w-2xl mx-auto font-light">
-              Pare de operar ferramentas e comece a operar lucros. Entre na lista de acesso e seja um dos primeiros a testar.
-            </p>
-            <Link to="/early-access">
-              <Button size="lg" className="h-14 px-10 text-lg rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold group shadow-[0_0_40px_rgba(124,58,237,0.4)] hover:shadow-[0_0_60px_rgba(124,58,237,0.6)] transition-all duration-300 border border-indigo-400/20 relative overflow-hidden">
-                <span className="relative z-10 flex items-center">
-                  Garantir minha vaga
-                  <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </span>
-                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
-              </Button>
-            </Link>
-          </div>
-        </section>
+      <main className="relative w-full flex flex-col items-center">
+        <HeroProductDemo />
+        <ProductToCampaignFlow />
+        <CreativeShowcase />
+        <CreativeDNAVisualizer />
+        <AIEngineArchitecture />
+        <ProductAngles />
+        <BeforeAfterWorkflow />
+        <MultiFormatShowcase />
+        <FinalCTA />
       </main>
 
-      {/* Footer Minimalista */}
-      <footer className="border-t border-white/5 py-12 px-6 flex flex-col md:flex-row items-center justify-between max-w-7xl mx-auto text-zinc-600 text-sm">
-        <p>© 2026 Achadinhos em Minutos. Todos os direitos reservados.</p>
-        <div className="flex gap-4 mt-4 md:mt-0">
-           <a href="#" className="hover:text-zinc-400">Termos</a>
-           <a href="#" className="hover:text-zinc-400">Privacidade</a>
-           <a href="#" className="hover:text-zinc-400">Status</a>
+      {/* Footer Premium Minimalista */}
+      <footer className="bg-[#0a0a0c] border-t border-white/5 py-12 px-6 flex flex-col md:flex-row items-center justify-between max-w-7xl mx-auto text-zinc-600 text-sm">
+        <div className="flex items-center gap-2 mb-6 md:mb-0">
+          <Wand2 className="w-5 h-5 text-indigo-900" />
+          <span className="font-bold text-lg text-zinc-500">Achadinhos<span className="text-indigo-900">.ai</span></span>
         </div>
+        
+        <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 mb-6 md:mb-0">
+           <a href="#" className="hover:text-zinc-300 transition-colors">Produto</a>
+           <a href="#" className="hover:text-zinc-300 transition-colors">Privacidade</a>
+           <a href="#" className="hover:text-zinc-300 transition-colors">Termos</a>
+           <a href="#" className="hover:text-zinc-300 transition-colors">Status</a>
+        </div>
+        
+        <p className="text-zinc-700">© 2026 Achadinhos.ai. Inteligência Criativa.</p>
       </footer>
     </div>
   );

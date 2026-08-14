@@ -44,23 +44,16 @@ export class CreativeStrategyService {
         - coreMessage (string): A mensagem principal que deve ficar clara em uma frase.
       `;
 
-      const responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
-      const cleanJson = responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '');
-      const parsedAi = JSON.parse(cleanJson);
-
-      const mockResult: CreativeStrategyOutputDTO = {
-        angle: parsedAi.angle ?? 'Desconto Imperdível',
-        toneOfVoice: parsedAi.toneOfVoice ?? 'Urgente',
-        durationSeconds: parsedAi.durationSeconds ?? 15,
-        coreMessage: parsedAi.coreMessage ?? 'Compre agora.'
-      };
-
-      const validatedOutput = creativeStrategyOutputSchema.parse(mockResult);
+      const validatedOutput = await aiProvider.generateStructured<CreativeStrategyOutputDTO>({
+        prompt,
+        schema: creativeStrategyOutputSchema,
+        systemInstruction: "Aja como o Diretor de Estratégia de uma agência de marketing de conversão. Retorne ESTRITAMENTE um objeto JSON."
+      });
 
       telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 500, metadata: { 
         action: 'success',
         angle: validatedOutput.angle,
-        mode: 'real_ai'
+        mode: 'ai_structured'
       }});
 
       return validatedOutput;

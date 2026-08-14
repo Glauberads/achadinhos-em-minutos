@@ -47,11 +47,11 @@ export class CreativeReviewerService {
         }
       `;
 
-      const responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
-      const cleanJson = responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '');
-      const parsedAi = JSON.parse(cleanJson);
-
-      const validatedOutput = creativeReviewerOutputSchema.parse(parsedAi);
+      const validatedOutput = await aiProvider.generateStructured<CreativeReviewerOutputDTO>({
+        prompt,
+        schema: creativeReviewerOutputSchema,
+        systemInstruction: "Aja como um Auditor de Qualidade Rigoroso. Retorne ESTRITAMENTE um objeto JSON."
+      });
 
       telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 500, metadata: { 
         action: 'success',

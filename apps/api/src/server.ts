@@ -12,13 +12,15 @@ import { dashboardRoutes } from './routes/dashboard';
 import { creativeRoutes } from './routes/creatives';
 import { checkoutRoutes } from './routes/checkout';
 import { webhookRoutes } from './routes/webhooks';
+import { superadminAIRoutes } from './routes/superadmin-ai';
 import { registerEvents } from './events/event-registry';
 
-// Inicializar workers
 import './workers/creative-render.worker';
 
 import multipart from '@fastify/multipart';
+import { telemetryService } from './services/telemetry.service';
 
+export const buildApp = async () => {
 const server = Fastify({
   logger: true
 });
@@ -60,7 +62,6 @@ server.addHook('onRequest', (request, reply, done) => {
 // ============================
 // Telemetry Hook
 // ============================
-import { telemetryService } from './services/telemetry.service';
 
 server.addHook('onRequest', (request, reply, done) => {
   (request as any).startTime = performance.now();
@@ -154,7 +155,7 @@ const healthCheckHandler = async (request: any, reply: any) => {
 
   try {
     const { supabaseAdmin } = await import('./lib/supabase');
-    const { data, error } = await supabaseAdmin.from('users').select('id').limit(1);
+    const { error } = await supabaseAdmin.from('profiles').select('id').limit(1);
     if (!error) {
       health.database = 'online';
     }
@@ -174,12 +175,17 @@ const healthCheckHandler = async (request: any, reply: any) => {
 
   if (health.database === 'offline' || health.redis === 'offline') {
     health.status = 'degraded';
+    return reply.status(503).send(health);
   }
 
   return reply.status(200).send(health);
 };
 
 server.get('/health', healthCheckHandler);
+server.get('/health/ready', healthCheckHandler);
+server.get('/health/live', async (request, reply) => {
+  return reply.status(200).send({ status: 'ok', timestamp: new Date().toISOString() });
+});
 server.get('/api/health', healthCheckHandler);
 
 // ============================
@@ -196,19 +202,26 @@ server.register(dashboardRoutes, { prefix: '/api/dashboard' });
 server.register(creativeRoutes, { prefix: '/api/creatives' });
 server.register(checkoutRoutes, { prefix: '/api/checkout' });
 server.register(webhookRoutes, { prefix: '/webhooks' });
+server.register(superadminAIRoutes, { prefix: '/api/superadmin/ai' });
+
+  return server;
+};
 
 // ============================
 // Iniciar Servidor
 // ============================
 const start = async () => {
   try {
+    const app = await buildApp();
     const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
-    await server.listen({ port, host: '0.0.0.0' });
+    await app.listen({ port, host: '0.0.0.0' });
     console.log(`Server listening at http://localhost:${port}`);
   } catch (err) {
-    server.log.error(err);
+    console.error(err);
     process.exit(1);
   }
 };
 
-start();
+if (require.main === module) {
+  start();
+}

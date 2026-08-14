@@ -3,6 +3,7 @@ import { Plus, Play, Pause, RefreshCw, BarChart2, Bot, AlertTriangle, Clock, Set
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { useNavigate } from 'react-router-dom'
+import { useToast } from '../components/ui/toast'
 
 interface Campaign {
   id: string;
@@ -21,6 +22,7 @@ interface Group {
 }
 
 export function Campaigns() {
+  const { toast } = useToast()
   const navigate = useNavigate()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [groups, setGroups] = useState<Group[]>([])
@@ -74,7 +76,7 @@ export function Campaigns() {
         fetchData()
       }
     } catch (err) {
-      alert('Erro ao salvar campanha.')
+      toast('Erro ao salvar campanha.', 'error')
     } finally {
       setSaving(false)
     }
@@ -86,7 +88,7 @@ export function Campaigns() {
       const { data: { session } } = await supabase.auth.getSession()
       const res = await api.post(`/api/campaigns/${id}/${action}`)
       if (res.data) {
-        if (action === 'run-now') alert('Campanha enviada para a fila de execução!')
+        if (action === 'run-now') toast('Campanha enviada para a fila de execução!', 'success')
         fetchData()
       }
     } catch (err) {

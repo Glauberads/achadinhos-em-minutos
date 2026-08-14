@@ -174,6 +174,17 @@ export class CacheService {
     }
   }
 
+  /**
+   * Encerra a conexão com o Redis (Graceful Shutdown)
+   */
+  async quit(): Promise<void> {
+    try {
+      await redisConnection.quit();
+    } catch (e) {
+      // Ignora erro no fechamento
+    }
+  }
+
   // ============================
   // SEGURANÇA E UTILITÁRIOS
   // ============================

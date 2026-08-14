@@ -15,7 +15,9 @@ import {
   Wand2,
   BarChart3,
   Terminal,
-  CreditCard
+  CreditCard,
+  Activity,
+  Brain
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { OnboardingModal } from './ui/onboarding'
@@ -73,6 +75,8 @@ export function Layout() {
     { name: 'WhatsApp', path: '#', icon: MessageCircle, disabled: true },
     { name: 'Auditoria', path: '/audit-logs', icon: ShieldCheck },
     { name: 'System Reports', path: '/system/reports', icon: BarChart3 },
+    { name: 'Observabilidade', path: '/system/observability', icon: Activity },
+    { name: 'Creative Brain', path: '/system/creative-intelligence', icon: Brain },
     { name: 'Logs do Sistema', path: '/system/logs', icon: Terminal },
     { name: 'Gateways', path: '/gateways', icon: CreditCard },
     { name: 'Configurações', path: '/config', icon: Settings },

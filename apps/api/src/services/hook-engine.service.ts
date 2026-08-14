@@ -1,5 +1,8 @@
 import { MarketingStrategy } from './marketing-brain.service';
 import { IntelligenceAnalysis } from './creative-intelligence.service';
+import { featureFlagService } from './feature-flag.service';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 interface HookTemplate {
   text: string;
@@ -17,20 +20,33 @@ export class HookEngineService {
     { text: "Se você tem esse problema, pare tudo.", tags: ['Transformação', 'Autoridade', 'Desejo de status'] }
   ];
 
-  generateHook(analysis: IntelligenceAnalysis, strategy: MarketingStrategy): string {
-    // Procura hooks que dão match com a estratégia de marketing definida pelo Marketing Brain
+  async determineV2HookStrategy(awareness: string, temperature: string): Promise<string> {
+    // Retorna a estratégia ideal para o PromptBuilder instruir a LLM
+    if (awareness === 'unaware' || temperature === 'cold') return 'Curiosity ou Problem-Focused';
+    if (awareness === 'problem_aware') return 'Problem-Focused ou Contrarian';
+    if (awareness === 'product_aware') return 'Authority ou Lists & Numbers';
+    return 'Desired Outcome';
+  }
+
+  async generateHook(analysis: IntelligenceAnalysis, strategy: MarketingStrategy): Promise<string> {
+    const isV2 = await featureFlagService.isEnabled('creative_intelligence_v2');
+    if (isV2) {
+      // V2: O Hook não é gerado aqui de forma chumbada, mas retorna a ESTRATÉGIA para o PromptBuilder
+      // Na V2 o Planner não usa o generateHook para criar a string final, a LLM cria a string final.
+      return await this.determineV2HookStrategy((analysis as any).awareness_level || 'problem_aware', 'cold');
+    }
+
+    // V1 Fallback (Listas chumbadas)
     const matches = this.library.filter(hook => 
       hook.tags.includes(strategy.mental_trigger) || 
       hook.tags.includes(strategy.emotion)
     );
 
     if (matches.length > 0) {
-      // Pick a random match for some A/B variety or pick the first
       const randomIndex = Math.floor(Math.random() * matches.length);
       return matches[randomIndex].text;
     }
 
-    // Fallback if no specific match
     return "Olha o que eu acabei de achar!";
   }
 }

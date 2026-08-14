@@ -14,6 +14,8 @@ import { AdminProductDashboard } from './pages/AdminProductDashboard'
 import { SystemLogs } from './pages/SystemLogs'
 import { Checkout } from './pages/Checkout'
 import { Gateways } from './pages/Gateways'
+import { ObservabilityDashboard } from './pages/ObservabilityDashboard'
+import { CreativeIntelligence } from './pages/CreativeIntelligence'
 
 import { ToastProvider } from './components/ui/toast'
 
@@ -54,6 +56,8 @@ function App() {
             <Route path="/system/reports" element={<Reports />} />
             <Route path="/system/operation-center" element={<AdminProductDashboard />} />
             <Route path="/system/logs" element={<SystemLogs />} />
+            <Route path="/system/observability" element={<ObservabilityDashboard />} />
+            <Route path="/system/creative-intelligence" element={<CreativeIntelligence />} />
             <Route path="/gateways" element={<Gateways />} />
           </Route>
 

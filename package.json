@@ -4,14 +4,17 @@
   "private": true,
   "description": "SaaS para automação de posts de afiliados",
   "scripts": {
-    "dev": "pnpm --filter '*' dev",
+    "dev": "pnpm -r run dev",
     "dev:api": "pnpm --filter api run dev:api",
     "dev:workers": "pnpm --filter api run dev:workers",
-    "build": "pnpm --filter '*' build",
-    "test": "pnpm --filter '*' test"
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck"
   },
   "devDependencies": {
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.10"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

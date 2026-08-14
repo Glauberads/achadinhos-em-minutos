@@ -13,7 +13,7 @@ const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const API_URL = import.meta.env.VITE_API_URL || '';
+  const API_URL = import.meta.env.DEV ? (import.meta.env.VITE_API_URL || '') : '';
   const url = `${API_URL}${endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`}`;
 
   const response = await fetch(url, {

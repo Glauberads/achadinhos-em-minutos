@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Search, ShoppingBag, ExternalLink, Download, Send, AlertTriangle, Info, CheckCircle2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
+import { useToast } from '../components/ui/toast'
 
 interface NormalizedProduct {
   platform: 'shopee' | 'mercadolivre';
@@ -20,6 +21,7 @@ interface NormalizedProduct {
 }
 
 export function SearchProducts() {
+  const { toast } = useToast()
   const [platform, setPlatform] = useState<'shopee' | 'mercadolivre'>('shopee')
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -71,7 +73,7 @@ export function SearchProducts() {
         setJobId(response.data.job_id)
       }
     } catch (err: any) {
-      alert('Erro ao buscar: ' + (err.response?.data?.error || err.message))
+      toast('Erro ao buscar: ' + (err.response?.data?.error || err.message), 'error')
     } finally {
       setLoading(false)
     }
@@ -93,7 +95,7 @@ export function SearchProducts() {
         setSelectedIds(new Set())
       }
     } catch (err: any) {
-      alert('Erro ao importar: ' + (err.response?.data?.error || err.message))
+      toast('Erro ao importar: ' + (err.response?.data?.error || err.message), 'error')
     } finally {
       setImporting(false)
     }

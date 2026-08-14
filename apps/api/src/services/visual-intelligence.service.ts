@@ -51,28 +51,23 @@ export class VisualIntelligenceService {
         - suggestedFocus (string): breve descrição de onde o foco do layout deve ficar (ex: "Produto no centro").
       `;
 
-      let responseText: string;
+      let validatedOutput: VisualIntelligenceOutputDTO;
       if (base64Image) {
-        responseText = await aiProvider.generateContent(prompt, { 
-          jsonMode: true, 
-          image: { mimeType, data: base64Image } 
+        validatedOutput = await aiProvider.generateStructured({
+          prompt,
+          schema: visualIntelligenceOutputSchema,
+          options: {
+            image: { mimeType, data: base64Image }
+          },
+          systemInstruction: "Analise a imagem e retorne ESTRITAMENTE um JSON."
         });
       } else {
-        responseText = await aiProvider.generateContent(prompt, { jsonMode: true });
+        validatedOutput = await aiProvider.generateStructured({
+          prompt,
+          schema: visualIntelligenceOutputSchema,
+          systemInstruction: "Analise a imagem e retorne ESTRITAMENTE um JSON."
+        });
       }
-
-      const cleanJson = responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '');
-      const parsedAi = JSON.parse(cleanJson);
-
-      const mockResult: VisualIntelligenceOutputDTO = {
-        hasFace: parsedAi.hasFace ?? false,
-        dominantColors: parsedAi.dominantColors ?? ['#000000', '#FFFFFF'],
-        qualityScore: parsedAi.qualityScore ?? 75,
-        suggestedFocus: parsedAi.suggestedFocus ?? 'Produto'
-      };
-
-      // Validate Output
-      const validatedOutput = visualIntelligenceOutputSchema.parse(mockResult);
       
       telemetryService.log({ operation_type: 'AI_GENERATION', status: 'SUCCESS', total_time_ms: 500, metadata: { 
         action: 'success',

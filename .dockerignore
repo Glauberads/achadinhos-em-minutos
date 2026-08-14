@@ -1,0 +1,34 @@
+.git
+node_modules
+**/node_modules
+**/dist
+**/build
+**/.env
+**/.env.*
+!**/.env.example
+*.log
+logs
+coverage
+.nyc_output
+.cache
+.parcel-cache
+*.tsbuildinfo
+.DS_Store
+.vscode
+.idea
+*.swp
+*.swo
+
+# Root-level scratch files
+check-rls.ts
+scratch-test.ts
+test.js
+fix.js
+fix-ui.js
+generate-audits.js
+generate-framework.js
+contexto.md
+manual de uso.md
+
+# Supabase local
+supabase/.temp

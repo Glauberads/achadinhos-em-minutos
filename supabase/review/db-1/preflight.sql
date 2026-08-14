@@ -219,13 +219,54 @@ SELECT
   service_grant_count
 FROM facts;
 
--- Identity mapping only. Email is informational and must never be the authority.
+-- Aggregate identity mapping without exposing email or user identifiers.
+-- query_to_xml defers parsing the profile query until runtime, so a completely
+-- absent public.profiles table can also be reported without undefined-table or
+-- undefined-column errors. to_jsonb(p) makes platform_role optional.
+WITH auth_facts AS (
+  SELECT count(*)::bigint AS auth_users_count
+  FROM auth.users
+),
+profile_query AS (
+  SELECT CASE
+    WHEN to_regclass('public.profiles') IS NULL THEN NULL::xml
+    ELSE query_to_xml(
+      $identity_query$
+        SELECT
+          count(p.id)::bigint AS profiles_matched_count,
+          count(*) FILTER (WHERE p.id IS NULL)::bigint AS missing_profiles_count,
+          count(*) FILTER (
+            WHERE NULLIF(to_jsonb(p) ->> 'platform_role', '') IS NOT NULL
+          )::bigint AS platform_role_non_null_count
+        FROM auth.users u
+        LEFT JOIN public.profiles p ON p.id = u.id
+      $identity_query$,
+      true,
+      false,
+      ''
+    )
+  END AS result
+),
+profile_facts AS (
+  SELECT
+    COALESCE(
+      ((xpath('/table/row/profiles_matched_count/text()', result))[1]::text)::bigint,
+      0
+    ) AS profiles_matched_count,
+    COALESCE(
+      ((xpath('/table/row/missing_profiles_count/text()', result))[1]::text)::bigint,
+      (SELECT auth_users_count FROM auth_facts)
+    ) AS missing_profiles_count,
+    COALESCE(
+      ((xpath('/table/row/platform_role_non_null_count/text()', result))[1]::text)::bigint,
+      0
+    ) AS platform_role_non_null_count
+  FROM profile_query
+)
 SELECT
-  u.id AS auth_user_id,
-  u.email,
-  p.id AS profile_id,
-  (p.id IS NOT NULL) AS has_matching_profile,
-  p.platform_role
-FROM auth.users u
-LEFT JOIN public.profiles p ON p.id = u.id
-ORDER BY u.created_at, u.id;
+  auth_facts.auth_users_count,
+  profile_facts.profiles_matched_count,
+  profile_facts.missing_profiles_count,
+  profile_facts.platform_role_non_null_count
+FROM auth_facts
+CROSS JOIN profile_facts;

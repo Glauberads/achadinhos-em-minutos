@@ -1,0 +1,99 @@
+name: achadinhos
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  redis:
+    image: redis:7.4.5-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - achadinhos_internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging: *default-logging
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://app.achadinhos.builderfy.com.br}
+      SUPABASE_URL: ${SUPABASE_URL:?SUPABASE_URL is required}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      REDIS_URL: redis://redis:6379
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ASAAS_API_KEY: ${ASAAS_API_KEY:-}
+      ASAAS_WEBHOOK_TOKEN: ${ASAAS_WEBHOOK_TOKEN:-}
+      ASAAS_MODE: ${ASAAS_MODE:-production}
+      AI_PROVIDER: ${AI_PROVIDER:-gemini}
+      CREATIVE_AI_PROVIDER: ${CREATIVE_AI_PROVIDER:-gemini}
+      CREATIVE_AI_MOCK_ENABLED: ${CREATIVE_AI_MOCK_ENABLED:-false}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
+      TELEGRAM_SEND_INTERVAL_SECONDS: ${TELEGRAM_SEND_INTERVAL_SECONDS:-30}
+    expose:
+      - "3001"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - achadinhos_internal
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health/live').then(r => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    logging: *default-logging
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:?VITE_SUPABASE_URL is required}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:?VITE_SUPABASE_ANON_KEY is required}
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - achadinhos_internal
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.achadinhos.rule=Host(`app.achadinhos.builderfy.com.br`)
+      - traefik.http.routers.achadinhos.entrypoints=websecure
+      - traefik.http.routers.achadinhos.tls=true
+      - traefik.http.routers.achadinhos.tls.certresolver=letsencrypt
+      - traefik.http.routers.achadinhos.middlewares=security-chain@docker
+      - traefik.http.services.achadinhos.loadbalancer.server.port=80
+    logging: *default-logging
+
+volumes:
+  redis_data:
+
+networks:
+  achadinhos_internal:
+    driver: bridge
+  proxy:
+    external: true

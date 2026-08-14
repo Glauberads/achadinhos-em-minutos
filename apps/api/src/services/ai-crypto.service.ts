@@ -97,4 +97,21 @@ export class AICryptoService {
   }
 }
 
-export const aiCryptoService = new AICryptoService();
+let sharedInstance: AICryptoService | undefined;
+
+const getSharedInstance = () => {
+  sharedInstance ??= new AICryptoService();
+  return sharedInstance;
+};
+
+// Lazy facade: the API can boot without capability secrets, while any AI
+// credential operation still fails explicitly if ENCRYPTION_KEY is absent or
+// invalid. This does not change the GCM envelope or key validation contract.
+export const aiCryptoService: Pick<AICryptoService, 'encrypt' | 'decrypt'> = {
+  encrypt(plaintext: string) {
+    return getSharedInstance().encrypt(plaintext);
+  },
+  decrypt(encryptedData: string) {
+    return getSharedInstance().decrypt(encryptedData);
+  },
+};

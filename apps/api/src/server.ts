@@ -13,16 +13,24 @@ import { creativeRoutes } from './routes/creatives';
 import { checkoutRoutes } from './routes/checkout';
 import { webhookRoutes } from './routes/webhooks';
 import { superadminAIRoutes } from './routes/superadmin-ai';
+import { healthRoutes, HealthDependencies } from './routes/health';
 import { registerEvents } from './events/event-registry';
 
 import './workers/creative-render.worker';
 
 import multipart from '@fastify/multipart';
 import { telemetryService } from './services/telemetry.service';
+import { parseAllowedOrigins } from './lib/cors';
 
-export const buildApp = async () => {
+export interface BuildAppOptions {
+  healthDependencies?: HealthDependencies;
+}
+
+export const buildApp = async (options: BuildAppOptions = {}) => {
 const server = Fastify({
-  logger: true
+  logger: true,
+  // The API is internal-only and receives forwarded metadata from Nginx.
+  trustProxy: true,
 });
 
 server.register(multipart, {
@@ -37,20 +45,19 @@ registerEvents();
 // ============================
 // CORS Configurável
 // ============================
-const ALLOWED_ORIGINS = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
-  : ['http://localhost:5173', 'http://localhost:3000'];
+const allowedOrigins = parseAllowedOrigins(process.env.CORS_ORIGINS);
 
 server.addHook('onRequest', (request, reply, done) => {
   const origin = request.headers.origin || '';
 
-  if (ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*')) {
+  if (origin && allowedOrigins.includes(origin)) {
     reply.header('Access-Control-Allow-Origin', origin);
+    reply.header('Access-Control-Allow-Credentials', 'true');
+    reply.header('Vary', 'Origin');
   }
 
   reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   reply.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-  reply.header('Access-Control-Allow-Credentials', 'true');
 
   if (request.method === 'OPTIONS') {
     reply.status(200).send();
@@ -141,56 +148,10 @@ server.setErrorHandler((error, request, reply) => {
 });
 
 // ============================
-// Health Check
-// ============================
-const healthCheckHandler = async (request: any, reply: any) => {
-  const health = {
-    status: 'ok',
-    api: 'online',
-    redis: 'offline',
-    database: 'offline',
-    timestamp: new Date().toISOString(),
-    uptime: Math.floor(process.uptime())
-  };
-
-  try {
-    const { supabaseAdmin } = await import('./lib/supabase');
-    const { error } = await supabaseAdmin.from('profiles').select('id').limit(1);
-    if (!error) {
-      health.database = 'online';
-    }
-  } catch (e) {
-    // db offline
-  }
-
-  try {
-    const { cacheService } = await import('./services/cache.service');
-    // Assuming a ping method or just relying on generic catch if redis is truly down
-    // Since we don't have direct ping in cacheService necessarily, we try a dummy get
-    await cacheService.get('health_ping');
-    health.redis = 'online';
-  } catch (e) {
-    // redis offline
-  }
-
-  if (health.database === 'offline' || health.redis === 'offline') {
-    health.status = 'degraded';
-    return reply.status(503).send(health);
-  }
-
-  return reply.status(200).send(health);
-};
-
-server.get('/health', healthCheckHandler);
-server.get('/health/ready', healthCheckHandler);
-server.get('/health/live', async (request, reply) => {
-  return reply.status(200).send({ status: 'ok', timestamp: new Date().toISOString() });
-});
-server.get('/api/health', healthCheckHandler);
-
-// ============================
 // Registrar Rotas
 // ============================
+server.register(healthRoutes, { dependencies: options.healthDependencies });
+server.register(healthRoutes, { prefix: '/api', dependencies: options.healthDependencies });
 server.register(telegramRoutes, { prefix: '/api/telegram' });
 server.register(productRoutes, { prefix: '/api/products' });
 server.register(marketplaceRoutes, { prefix: '/api/marketplaces' });

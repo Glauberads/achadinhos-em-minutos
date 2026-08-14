@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq';
-import { redisConnection } from '../lib/redis';
+import { bullMQConnection, redisConnection } from '../lib/redis';
 import { telegramQueue } from '../lib/queue';
 import { campaignRepository, productRepository, scheduledPostRepository } from '../repositories';
 import { ShopeeProvider } from '../providers/products/shopee.provider';
@@ -165,7 +165,7 @@ export const campaignWorker = new Worker(
       await redisConnection.del(lockKey);
     }
   },
-  { connection: redisConnection, concurrency: parseInt(process.env.WORKER_CONCURRENCY || '1') }
+  { connection: bullMQConnection, concurrency: parseInt(process.env.WORKER_CONCURRENCY || '1') }
 );
 
 campaignWorker.on('failed', (job, err) => {

@@ -1,41 +1,52 @@
 import IORedis from 'ioredis';
 import dotenv from 'dotenv';
+import { applicationRedisOptions, bullMQRedisOptions } from './redis-options';
 dotenv.config();
 
 const redisUrl = process.env.REDIS_URL || `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`;
 
 // Conexão principal da aplicação (cache, sessões, etc.)
 export const redisConnection = new IORedis(redisUrl, {
-  maxRetriesPerRequest: 1,       // Não tentar infinitamente
-  connectTimeout: 2000,           // Desistir de conectar em 2s
-  lazyConnect: false,
-  enableOfflineQueue: false,      // Não enfileirar quando desconectado
-  retryStrategy: (times) => {
-    if (times > 3) return null;
-    return Math.min(times * 500, 2000);
-  },
+  ...applicationRedisOptions,
 });
 
 // Conexão dedicada para BullMQ (exige maxRetriesPerRequest: null)
 export const bullMQConnection = new IORedis(redisUrl, {
-  maxRetriesPerRequest: null,    // Obrigatório para BullMQ
-  connectTimeout: 2000,
-  retryStrategy: (times) => {
-    if (times > 3) return null;
-    return Math.min(times * 500, 2000);
-  },
+  ...bullMQRedisOptions,
 });
 
-const silenceError = (err: Error & { _logged?: boolean }) => {
-  if (!err._logged) {
-    console.warn('[Redis] Unavailable (running without cache):', err.message);
-    err._logged = true;
-  }
+const LOG_THROTTLE_MS = 30_000;
+
+const attachLifecycleLogging = (client: IORedis, role: string) => {
+  let lastErrorLogAt = 0;
+  let lastReconnectLogAt = 0;
+  let lastCloseLogAt = 0;
+
+  client.on('connect', () => console.info(`[Redis:${role}] Connection established`));
+  client.on('ready', () => console.info(`[Redis:${role}] Ready`));
+  client.on('reconnecting', (delay: number) => {
+    const now = Date.now();
+    if (now - lastReconnectLogAt >= LOG_THROTTLE_MS) {
+      console.warn(`[Redis:${role}] Reconnecting in ${delay}ms`);
+      lastReconnectLogAt = now;
+    }
+  });
+  client.on('close', () => {
+    const now = Date.now();
+    if (now - lastCloseLogAt >= LOG_THROTTLE_MS) {
+      console.warn(`[Redis:${role}] Connection closed`);
+      lastCloseLogAt = now;
+    }
+  });
+  client.on('end', () => console.error(`[Redis:${role}] Reconnection stopped`));
+  client.on('error', (error: Error) => {
+    const now = Date.now();
+    if (now - lastErrorLogAt >= LOG_THROTTLE_MS) {
+      console.warn(`[Redis:${role}] Unavailable: ${error.message}`);
+      lastErrorLogAt = now;
+    }
+  });
 };
 
-redisConnection.on('error', silenceError);
-bullMQConnection.on('error', silenceError);
-
-redisConnection.on('connect', () => console.log('[Redis] Main connection established'));
-bullMQConnection.on('connect', () => console.log('[Redis] BullMQ connection established'));
-
+attachLifecycleLogging(redisConnection, 'application');
+attachLifecycleLogging(bullMQConnection, 'bullmq');

@@ -99,7 +99,6 @@ export async function creativeRoutes(server: FastifyInstance) {
       const buffer = await response.arrayBuffer();
       const contentType = response.headers.get('content-type') || 'image/jpeg';
 
-      reply.header('Access-Control-Allow-Origin', '*');
       reply.header('Content-Type', contentType);
       reply.header('Cache-Control', 'public, max-age=31536000');
       

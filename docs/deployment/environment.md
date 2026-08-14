@@ -12,7 +12,6 @@ A aplicação gerencia configurações estritamente através do ambiente (`proce
 
 ### Grupo Supabase
 * `SUPABASE_URL`: A URL do seu banco/API no Supabase (Ex: `https://abcd.supabase.co`).
-* `SUPABASE_ANON_KEY`: A chave pública para ações restritas e checadas pelas RLS do Supabase.
 * `SUPABASE_SERVICE_ROLE_KEY`: A chave mestre e secreta. Usada pelo backend para bypass das regras de acesso RLS. Nunca exiba isso publicamente.
 
 ### Grupo Redis e Filas
@@ -29,4 +28,4 @@ A aplicação gerencia configurações estritamente através do ambiente (`proce
 * `ASAAS_ENV`: (`production` ou `sandbox`)
 
 ### Grupo Segurança e Rede
-* `CORS_ORIGINS`: IPs ou domínios em vírgula que podem requisitar dados (ex: `https://achadinhos.builderfy.com.br`). Evita requisições externas não autorizadas.
+* `CORS_ORIGINS`: origens exatas separadas por vírgula. Em produção deve incluir `https://app.achadinhos.builderfy.com.br`. Wildcard não é aceito porque a API habilita credenciais.

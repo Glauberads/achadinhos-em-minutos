@@ -1,8 +1,33 @@
 import { FastifyInstance } from 'fastify';
-import { supabaseAdmin } from '../lib/supabase';
-import { cacheService } from '../services/cache.service';
 
-export async function healthRoutes(server: FastifyInstance) {
+export interface HealthDependencies {
+  checkDatabase: () => Promise<void>;
+  pingRedis: () => Promise<string | null>;
+}
+
+export interface HealthRouteOptions {
+  dependencies?: HealthDependencies;
+}
+
+const defaultDependencies: HealthDependencies = {
+  async checkDatabase() {
+    const { supabaseAdmin } = await import('../lib/supabase');
+    const { error } = await supabaseAdmin.from('profiles').select('id').limit(1);
+
+    if (error) {
+      throw error;
+    }
+  },
+
+  async pingRedis() {
+    const { redisConnection } = await import('../lib/redis');
+    return redisConnection.ping();
+  },
+};
+
+export async function healthRoutes(server: FastifyInstance, options: HealthRouteOptions = {}) {
+  const dependencies = options.dependencies ?? defaultDependencies;
+
   const checkReadiness = async () => {
     const health = {
       status: 'healthy',
@@ -13,20 +38,20 @@ export async function healthRoutes(server: FastifyInstance) {
       uptime: Math.floor(process.uptime())
     };
 
-    // Test DB with short timeout logic if needed, but supabase from() should handle its own
     try {
-      const { error } = await supabaseAdmin.from('profiles').select('id').limit(1);
-      if (!error) health.database = 'online';
-    } catch (e) {
-      // db offline
+      await dependencies.checkDatabase();
+      health.database = 'online';
+    } catch {
+      // Database remains offline in the readiness response.
     }
 
-    // Test Redis
     try {
-      await cacheService.get('health_ping');
-      health.redis = 'online';
-    } catch (e) {
-      // redis offline
+      const response = await dependencies.pingRedis();
+      if (response === 'PONG') {
+        health.redis = 'online';
+      }
+    } catch {
+      // Redis remains offline in the readiness response.
     }
 
     if (health.database === 'offline' || health.redis === 'offline') {
@@ -37,25 +62,21 @@ export async function healthRoutes(server: FastifyInstance) {
     return { statusCode: 200, health };
   };
 
-  // Apenas verifica se o processo Fastify está de pé (não bate em banco)
-  server.get('/health/live', async (request, reply) => {
+  server.get('/health/live', async (_request, reply) => {
     return reply.status(200).send({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Valida conexões vitais
-  server.get('/health/ready', async (request, reply) => {
+  server.get('/health/ready', async (_request, reply) => {
     const result = await checkReadiness();
     return reply.status(result.statusCode).send(result.health);
   });
 
-  // Alias para readiness
-  server.get('/health', async (request, reply) => {
+  server.get('/health', async (_request, reply) => {
     const result = await checkReadiness();
     return reply.status(result.statusCode).send(result.health);
   });
 
-  // Métricas (stub)
-  server.get('/metrics', async (request, reply) => {
+  server.get('/metrics', async (_request, reply) => {
     return reply.status(200).send({
       memory: process.memoryUsage(),
       cpu: process.cpuUsage(),

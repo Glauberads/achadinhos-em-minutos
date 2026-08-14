@@ -1,5 +1,5 @@
 import { Worker, UnrecoverableError } from 'bullmq';
-import { redisConnection } from '../lib/redis';
+import { bullMQConnection, redisConnection } from '../lib/redis';
 import { scheduledPostRepository } from '../repositories';
 import { telegramService } from '../services';
 import { eventBus, TelegramSentEvent, TelegramFailedEvent, WorkerFailedEvent } from '../events';
@@ -118,7 +118,7 @@ export const telegramWorker = new Worker(
     }
   },
   {
-    connection: redisConnection,
+    connection: bullMQConnection,
   }
 );
 

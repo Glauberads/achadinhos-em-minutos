@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import crypto from 'crypto';
+
+const originalEncryptionKey = process.env.ENCRYPTION_KEY;
 
 describe('AICryptoService', () => {
   let AICryptoService: any;
   let aiCryptoService: any;
 
   beforeEach(async () => {
-    process.env.ENCRYPTION_KEY = 'dHzqKyyV12S+1f86DHgXQ9tqmS3L+xLEAUXFPgoqcGE='; // Valid 32-byte base64
+    process.env.ENCRYPTION_KEY = crypto.randomBytes(32).toString('base64');
     vi.resetModules();
     const module = await import('../../src/services/ai-crypto.service');
     AICryptoService = module.AICryptoService;
@@ -14,6 +17,11 @@ describe('AICryptoService', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    if (originalEncryptionKey === undefined) {
+      delete process.env.ENCRYPTION_KEY;
+    } else {
+      process.env.ENCRYPTION_KEY = originalEncryptionKey;
+    }
   });
 
   it('deve criptografar e não vazar o texto original', () => {
@@ -68,7 +76,7 @@ describe('AICryptoService', () => {
     // Create a new instance with a different valid key
     const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
-    process.env.ENCRYPTION_KEY = 'xHzqKyyV12S+1f86DHgXQ9tqmS3L+xLEAUXFPgoqcGE='; // Different 32-byte base64
+    process.env.ENCRYPTION_KEY = crypto.randomBytes(32).toString('base64');
     const otherCryptoService = new AICryptoService();
     
     expect(() => {
@@ -111,17 +119,16 @@ describe('AICryptoService', () => {
     process.env.ENCRYPTION_KEY = 'this-is-not-base64!';
     expect(() => new AICryptoService()).toThrow(/must be exactly 32 bytes/);
     
-    // 31 bytes (base64 encoded: length 31 = 44 chars with ==)
-    // crypto.randomBytes(31).toString('base64') -> 'R0a/R8/5h4dO5mS8+n8x1Y2j1r4=' (not accurate length string, just fake it with a real generator result)
-    process.env.ENCRYPTION_KEY = '12345678901234567890123456789012345678901w=='; // Decodes to 31 bytes
+    // 31 bytes
+    process.env.ENCRYPTION_KEY = crypto.randomBytes(31).toString('base64');
     expect(() => new AICryptoService()).toThrow(/must be exactly 32 bytes/);
     
     // 33 bytes
-    process.env.ENCRYPTION_KEY = '12345678901234567890123456789012345678901234'; // Decodes to 33 bytes
+    process.env.ENCRYPTION_KEY = crypto.randomBytes(33).toString('base64');
     expect(() => new AICryptoService()).toThrow(/must be exactly 32 bytes/);
     
     // 32 bytes - PASS
-    process.env.ENCRYPTION_KEY = 'dHzqKyyV12S+1f86DHgXQ9tqmS3L+xLEAUXFPgoqcGE=';
+    process.env.ENCRYPTION_KEY = crypto.randomBytes(32).toString('base64');
     expect(() => new AICryptoService()).not.toThrow();
 
     process.env.NODE_ENV = originalEnv;

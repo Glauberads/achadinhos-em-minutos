@@ -7,6 +7,13 @@ RUN corepack enable && corepack prepare pnpm@11 --activate
 
 WORKDIR /app
 
+# Public browser configuration. Never add server-side secrets here: every
+# VITE_* value is embedded in the generated JavaScript bundle.
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ENV VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+ENV VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+
 # Copy workspace root files
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 

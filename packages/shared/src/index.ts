@@ -131,4 +131,5 @@ export interface PaginatedResponse<T = any> {
 
 export * from './contracts/creative-dna';
 export * from './contracts/ai-governance';
+export * from './contracts/early-access';
 
